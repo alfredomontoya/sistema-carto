@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Position;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -16,11 +17,11 @@ class TestUsersSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Romer Teddy', 'email' => 'jefe@example.com', 'position' => 'jefe'],
-            ['name' => 'Cuma Albert', 'email' => 'tecnico@example.com', 'position' => 'tecnico'],
-            ['name' => 'Ana Paula', 'email' => 'abogado@example.com', 'position' => 'abogado'],
-            ['name' => 'Yeny Ortiz', 'email' => 'secretaria@example.com', 'position' => 'secretaria'],
-            ['name' => 'Ramiro Renteria', 'email' => 'asistente@example.com', 'position' => 'asistente'],
+            ['name' => 'Romer Teddy', 'username' => 'jefe', 'position' => 'jefe'],
+            ['name' => 'Cuma Albert', 'username' => 'tecnico', 'position' => 'tecnico'],
+            ['name' => 'Ana Paula', 'username' => 'abogado', 'position' => 'abogado'],
+            ['name' => 'Yeny Ortiz', 'username' => 'secretaria', 'position' => 'secretaria'],
+            ['name' => 'Ramiro Renteria', 'username' => 'asistente', 'position' => 'asistente'],
         ];
 
         foreach ($users as $entry) {
@@ -28,7 +29,7 @@ class TestUsersSeeder extends Seeder
                 ->whereHas('area', fn ($query) => $query->where('code', 'carto'))
                 ->first();
             $user = User::updateOrCreate(
-                ['email' => $entry['email']],
+                ['email' => UserService::emailFor($entry['username'])],
                 [
                     'name' => $entry['name'],
                     'password' => Hash::make('password'),
@@ -55,7 +56,7 @@ class TestUsersSeeder extends Seeder
                 }
             }
 
-            $this->command?->info("Usuario creado: {$entry['name']} ({$entry['email']}) -> {$entry['position']}");
+            $this->command?->info("Usuario creado: {$entry['name']} ({$entry['username']}) -> {$entry['position']}");
         }
     }
 }

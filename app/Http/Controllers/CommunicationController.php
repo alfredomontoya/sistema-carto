@@ -51,15 +51,15 @@ class CommunicationController extends Controller
         );
 
         return Inertia::render('Communications/Index', [
-            'communications' => CommunicationResource::collection($records)->resolve(),
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
             'filters' => $filters,
-            'pagination' => [
+            'communications' => Inertia::defer(fn () => CommunicationResource::collection($records)->resolve()),
+            'pagination' => Inertia::defer(fn () => [
                 'total' => $records->total(),
                 'per_page' => $records->perPage(),
                 'current_page' => $records->currentPage(),
                 'last_page' => $records->lastPage(),
-            ],
+            ]),
         ]);
     }
 

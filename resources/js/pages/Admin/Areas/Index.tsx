@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Deferred, Head, router, useForm } from '@inertiajs/react';
 import {
     Briefcase,
     ChevronDown,
@@ -7,6 +7,7 @@ import {
     Pencil,
     Plus,
     RotateCcw,
+    Search,
     Trash2,
 } from 'lucide-react';
 import * as React from 'react';
@@ -15,6 +16,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -26,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout';
@@ -51,13 +54,20 @@ interface PositionFormState {
     sort_order: string;
 }
 
-export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
+export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
+    const [search, setSearch] = React.useState('');
+    const tree = areas ?? [];
     const [areaDialogOpen, setAreaDialogOpen] = React.useState(false);
     const [editing, setEditing] = React.useState<AreaNode | null>(null);
     const [deleting, setDeleting] = React.useState<AreaNode | null>(null);
     const [resettingNumbering, setResettingNumbering] = React.useState<AreaNode | null>(null);
     const [resetting, setResetting] = React.useState(false);
+    const [forceReset, setForceReset] = React.useState(false);
+    const [resetTypes, setResetTypes] = React.useState<{ ci: boolean; of: boolean }>({
+        ci: true,
+        of: true,
+    });
 
     const [positionDialogOpen, setPositionDialogOpen] = React.useState(false);
     const [editingPosition, setEditingPosition] = React.useState<PositionData | null>(null);
@@ -123,16 +133,22 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
         });
     };
 
+    const selectedResetTypes = (['ci', 'of'] as const).filter((t) => resetTypes[t]);
+
     const confirmResetNumbering = () => {
         if (!resettingNumbering) return;
         setResetting(true);
-        router.post(route('admin.areas.reset-numbering', resettingNumbering.id), undefined, {
-            preserveScroll: true,
-            onFinish: () => {
-                setResetting(false);
-                setResettingNumbering(null);
+        router.post(
+            route('admin.areas.reset-numbering', resettingNumbering.id),
+            { force: forceReset, types: selectedResetTypes },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setResetting(false);
+                    setResettingNumbering(null);
+                },
             },
-        });
+        );
     };
 
     const openCreatePosition = (area: AreaNode) => {
@@ -184,6 +200,15 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
             return next;
         });
     };
+
+    const searching = search.trim().length > 0;
+    const visibleAreas = searching ? filterTree(tree, search) : tree;
+
+    React.useEffect(() => {
+        if (areas && areas.length > 0) {
+            setExpanded(new Set(collectExpandableIds(areas)));
+        }
+    }, [areas]);
 
     const renderPositions = (node: AreaNode) => {
         if ((node.positions?.length ?? 0) === 0) {
@@ -247,10 +272,10 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
         );
     };
 
-    const renderNode = (node: AreaNode) => {
+    const renderNode = (node: AreaNode, forceOpen = false) => {
         const isExpandable =
             (node.children?.length ?? 0) > 0 || (node.positions?.length ?? 0) > 0;
-        const isOpen = expanded.has(node.id);
+        const isOpen = forceOpen || expanded.has(node.id);
 
         return (
             <React.Fragment key={node.id}>
@@ -325,7 +350,7 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                 {isOpen && (
                     <>
                         {renderPositions(node)}
-                        {node.children?.map((child) => renderNode(child))}
+                        {node.children?.map((child) => renderNode(child, forceOpen))}
                     </>
                 )}
             </React.Fragment>
@@ -349,14 +374,29 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                 />
 
                 <Card>
-                    <CardContent className="p-4">
-                        {areas.length === 0 ? (
-                            <p className="py-12 text-center text-muted-foreground">
-                                No hay áreas creadas. Crea la primera.
-                            </p>
-                        ) : (
-                            <div className="space-y-0.5">{areas.map((node) => renderNode(node))}</div>
-                        )}
+                    <CardContent className="space-y-3 p-4">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Buscar área por nombre o código…"
+                                className="pl-9"
+                            />
+                        </div>
+                        <div className="space-y-0.5">
+                            <Deferred data="areas" fallback={<AreasSkeleton />}>
+                                {visibleAreas.length === 0 ? (
+                                    <p className="py-12 text-center text-muted-foreground">
+                                        {searching
+                                            ? `No se encontraron áreas para "${search.trim()}".`
+                                            : 'No hay áreas creadas. Crea la primera.'}
+                                    </p>
+                                ) : (
+                                    visibleAreas.map((node) => renderNode(node, searching))
+                                )}
+                            </Deferred>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -403,12 +443,12 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                                 <Label htmlFor="area-parent">Área padre</Label>
                                 <select
                                     id="area-parent"
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    className="flex h-9 w-full rounded-md border border-input bg-popover px-3 py-2 text-sm text-popover-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     value={areaForm.data.parent_id}
                                     onChange={(e) => areaForm.setData('parent_id', e.target.value)}
                                 >
                                     <option value="">— Ninguna (raíz) —</option>
-                                    {treeToOptions(areas).map((o) => (
+                                    {treeToOptions(tree).map((o) => (
                                         <option key={o.value} value={o.value}>
                                             {o.label}
                                         </option>
@@ -420,12 +460,12 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                             <Label htmlFor="area-numbering">Área de numeración (opcional)</Label>
                             <select
                                 id="area-numbering"
-                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                value={areaForm.data.numbering_area_id}
+                                    className="flex h-9 w-full rounded-md border border-input bg-popover px-3 py-2 text-sm text-popover-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={areaForm.data.numbering_area_id}
                                 onChange={(e) => areaForm.setData('numbering_area_id', e.target.value)}
                             >
                                 <option value="">— Propia (por defecto) —</option>
-                                {treeToOptions(areas)
+                                {treeToOptions(tree)
                                     .filter((o) => o.value !== editing?.id)
                                     .map((o) => (
                                         <option key={o.value} value={o.value}>
@@ -482,16 +522,22 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                                     <p className="font-medium text-destructive">Reiniciar numeración</p>
                                 </div>
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                    Reinicia el correlativo del año actual a 0001. Solo es posible si el
-                                    año actual aún no tiene números emitidos para esta área ni para áreas
-                                    que numeran como ella. Los números ya emitidos nunca se reutilizan.
+                                    Reinicia el correlativo del año actual a 0001 conservando las
+                                    comunicaciones existentes. Elige los tipos (comunicación interna
+                                    y/o oficio externo) y usa el switch "Reiniciar de todos modos"
+                                    si el año ya emitió números (los nuevos correlativos podrían
+                                    duplicar números ya usados).
                                 </p>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     className="mt-3 text-destructive hover:text-destructive"
-                                    onClick={() => setResettingNumbering(editing)}
+                                    onClick={() => {
+                                        setForceReset(false);
+                                        setResetTypes({ ci: true, of: true });
+                                        setResettingNumbering(editing);
+                                    }}
                                 >
                                     <RotateCcw className="h-4 w-4" />
                                     Reiniciar numeración
@@ -609,15 +655,59 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                         <DialogTitle>Reiniciar numeración</DialogTitle>
                         <DialogDescription>
                             ¿Reiniciar la numeración de <strong>{resettingNumbering?.name}</strong>?
-                            El próximo correlativo del año actual comenzará en 0001. Solo es posible si
-                            el año actual aún no tiene números emitidos.
+                            El próximo correlativo del año actual comenzará en 0001.
                         </DialogDescription>
                     </DialogHeader>
+                    <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            Selecciona los tipos de numeración a reiniciar. Las comunicaciones
+                            existentes se conservan. Si el año actual ya emitió números, reiniciar
+                            hará que los nuevos correlativos reutilicen números ya usados.
+                        </p>
+                        <div className="space-y-2">
+                            <label className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                    checked={resetTypes.ci}
+                                    onCheckedChange={(v) =>
+                                        setResetTypes((prev) => ({ ...prev, ci: v === true }))
+                                    }
+                                />
+                                Comunicación interna (ci)
+                            </label>
+                            <label className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                    checked={resetTypes.of}
+                                    onCheckedChange={(v) =>
+                                        setResetTypes((prev) => ({ ...prev, of: v === true }))
+                                    }
+                                />
+                                Oficio externo (of)
+                            </label>
+                            {selectedResetTypes.length === 0 && (
+                                <p className="text-sm text-destructive">
+                                    Selecciona al menos un tipo de numeración.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex items-center justify-between rounded-md border p-3">
+                            <div>
+                                <p className="font-medium">Reiniciar de todos modos</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Permite reiniciar aunque el año actual ya tenga números emitidos.
+                                </p>
+                            </div>
+                            <Switch checked={forceReset} onCheckedChange={setForceReset} />
+                        </div>
+                    </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setResettingNumbering(null)}>
                             Cancelar
                         </Button>
-                        <Button variant="destructive" onClick={confirmResetNumbering} disabled={resetting}>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmResetNumbering}
+                            disabled={resetting || selectedResetTypes.length === 0}
+                        >
                             {resetting ? 'Reiniciando…' : 'Reiniciar numeración'}
                         </Button>
                     </DialogFooter>
@@ -649,6 +739,50 @@ export default function AreasIndex({ areas }: { areas: AreaNode[] }) {
                 </DialogContent>
             </Dialog>
         </AppLayout>
+    );
+}
+
+function collectExpandableIds(nodes: AreaNode[], acc: string[] = []): string[] {
+    for (const node of nodes) {
+        if ((node.children?.length ?? 0) > 0 || (node.positions?.length ?? 0) > 0) {
+            acc.push(node.id);
+        }
+        collectExpandableIds(node.children ?? [], acc);
+    }
+    return acc;
+}
+
+function filterTree(nodes: AreaNode[], query: string): AreaNode[] {
+    const q = query.trim().toLowerCase();
+    const matches = (node: AreaNode) =>
+        node.name.toLowerCase().includes(q) || (node.code ?? '').toLowerCase().includes(q);
+
+    const prune = (node: AreaNode): AreaNode | null => {
+        const children = (node.children ?? [])
+            .map((child) => prune(child))
+            .filter((child): child is AreaNode => child !== null);
+
+        if (children.length > 0 || matches(node)) {
+            return { ...node, children };
+        }
+
+        return null;
+    };
+
+    return nodes.map((node) => prune(node)).filter((node): node is AreaNode => node !== null);
+}
+
+function AreasSkeleton() {
+    return (
+        <div className="space-y-2 py-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2" style={{ paddingLeft: (i % 3) * 20 }}>
+                    <Skeleton className="h-5 w-5" />
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-12" />
+                </div>
+            ))}
+        </div>
     );
 }
 

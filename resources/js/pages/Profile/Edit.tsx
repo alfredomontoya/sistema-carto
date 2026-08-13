@@ -36,7 +36,7 @@ export default function Edit({ avatar_gallery }: { avatar_gallery: AvatarGallery
                             <CardHeader>
                                 <CardTitle>Información personal</CardTitle>
                                 <CardDescription>
-                                    Actualiza tu nombre, correo, teléfono y dirección.
+                                    Actualiza tu nombre, usuario, teléfono y dirección.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

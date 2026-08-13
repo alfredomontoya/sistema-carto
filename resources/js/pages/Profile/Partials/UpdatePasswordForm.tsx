@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { FormEventHandler } from 'react';
 
 export default function UpdatePasswordForm() {
@@ -22,9 +22,8 @@ export default function UpdatePasswordForm() {
         <form onSubmit={submit} className="max-w-md space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="current_password">Contraseña actual</Label>
-                <Input
+                <PasswordInput
                     id="current_password"
-                    type="password"
                     value={data.current_password}
                     onChange={(e) => setData('current_password', e.target.value)}
                     autoComplete="current-password"
@@ -36,9 +35,8 @@ export default function UpdatePasswordForm() {
 
             <div className="space-y-2">
                 <Label htmlFor="password">Nueva contraseña</Label>
-                <Input
+                <PasswordInput
                     id="password"
-                    type="password"
                     value={data.password}
                     onChange={(e) => setData('password', e.target.value)}
                     autoComplete="new-password"
@@ -48,9 +46,8 @@ export default function UpdatePasswordForm() {
 
             <div className="space-y-2">
                 <Label htmlFor="password_confirmation">Confirmar contraseña</Label>
-                <Input
+                <PasswordInput
                     id="password_confirmation"
-                    type="password"
                     value={data.password_confirmation}
                     onChange={(e) => setData('password_confirmation', e.target.value)}
                     autoComplete="new-password"

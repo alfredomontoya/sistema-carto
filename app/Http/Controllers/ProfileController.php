@@ -40,6 +40,11 @@ class ProfileController extends Controller
     {
         $data = $request->validated();
 
+        if (array_key_exists('username', $data)) {
+            $data['email'] = UserService::emailFor($data['username']);
+            unset($data['username']);
+        }
+
         $this->users->updateProfile($request->user(), $data);
 
         if ($request->user()->wasChanged('email')) {

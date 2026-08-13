@@ -30,15 +30,17 @@ Guía para agentes que trabajan en este repositorio.
 
 ## Dominio
 
-- **Correlativo**: `prefijo.codigo_area.secuencia/año` (ej. `ci.carto.0001/2026`). Prefijos `ci`/`of` son constantes en `NumberSequenceService` (`TYPE_INTERNAL`/`TYPE_EXTERNAL`). Lo genera `NumberSequenceService`; nunca reutiliza números aunque se anule.
-- **Numeración configurable por área**: cada área puede apuntar a otra vía `areas.numbering_area_id` (panel `/admin/areas`). Si está configurada, la comunicación usa la secuencia y el prefijo del área apuntada (ej. un área configurada para numerar como CARTOGRAFIA genera `ci.carto.000X`), pero `communications.area_id` conserva el área real. Resolución de un solo nivel (`numberingArea()` en `NumberSequenceService`); la auto-referencia se descarta en `AreaService::update`. Cada área tiene su propia secuencia por defecto (ej. `ci.taes.0001/2026`).
-- **Reinicio de numeración**: `areas.reset_annually` (boolean, default `true`) controla si la secuencia reinicia en `0001` cada año (`ci.carto.0001/2027`) o continúa del año previo (`ci.carto.0011/2027`). El reinicio manual es `POST admin/areas/{area}/reset-numbering`; queda bloqueado si el año actual ya emitió números para esa área o para áreas que numeran como ella. El contador vive en `area_number_counters` (unique `area_id+year+type`); el fallback "continuar" en `EloquentNumberCounterRepository` solo aplica cuando no existe fila del año.
-- **Estado**: una comunicación es `activo` o `anulado`. Anular no libera el número. Solo el creador edita.
-- **Áreas y puestos**: áreas = departamentos (árbol recursivo); puestos = cargos dentro de un área (`positions.area_id`, único `area_id+code`). El área del usuario se deriva de su puesto actual. Historial en `position_user` (actual = `ended_at NULL`); `User::currentAssignment` (HasOne), `currentPosition` (HasOneThrough), `currentArea` (accesor que lee `currentAssignment.position.area` — NO es relación; cargar con `currentAssignment.position.area`).
-- **Asignación de puesto**: `UserService::assignPosition` / `removeFromCurrentPosition`; siempre consultar la asignación actual fresca (`$user->currentAssignment()->first()`) — la relación cacheada causa asignaciones duplicadas.
-- **Marca**: defaults en `config/brand.php` y `config/avatars.php`; la pantalla admin (`/admin/settings`) los sobreescribe en BD.
+Toda la lógica de negocio (correlativo y numeración, áreas y puestos, asignaciones, comunicaciones, marca, datos de ejemplo) está documentada en **[`domain.md`](./domain.md)** — fuente canónica. Consúltalo al tocar el dominio.
+
+Gotchas críticos que evitan bugs (resumen rápido):
+
+- `User::currentArea` es **accesor**, no relación: cargar con `currentAssignment.position.area`.
+- Consultar siempre la asignación actual fresca: `$user->currentAssignment()->first()` (la relación cacheada causa asignaciones duplicadas).
+- `communications.area_id` guarda el área real, no el área de numeración (`numbering_area_id`).
+- Anular no libera el número; los correlativos nunca se reutilizan.
 
 ## Datos de ejemplo
 
-- Admin: `admin@example.com` / `password` (variables `ADMIN_EMAIL` / `ADMIN_PASSWORD` del seeder).
+- Admin: `admin` / `password` (login por usuario; correo derivado `admin@carto.com` según `USER_DOMAIN`). Variables del seeder: `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Usuarios: el login y el alta usan solo el usuario (ej. `amontoya`); el correo completo se deriva como `usuario@USER_DOMAIN` (`config/auth.php` `user_domain`, default `carto.com`). `UserService::emailFor()` centraliza la derivación.
 - Área semilla: CARTOGRAFIA (raíz); puestos semilla: JEFE, TECNICO, ABOGADO, SECRETARIA, ASISTENTE. Admin asignado al puesto JEFE.

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable([
@@ -84,6 +85,14 @@ class User extends Authenticatable
             'id',
             'position_id',
         )->whereNull('position_user.ended_at');
+    }
+
+    /**
+     * The username (the part before the "@" of the email).
+     */
+    protected function username(): Attribute
+    {
+        return Attribute::get(fn () => Str::before($this->email, '@'));
     }
 
     /**

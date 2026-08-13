@@ -1,14 +1,17 @@
 import GuestLayout from '@/layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { FormEventHandler } from 'react';
 
 export default function Login({ status }: { status?: string }) {
+    const userDomain = usePage().props.app.user_domain;
+
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        username: '',
         password: '',
         remember: false as boolean,
     });
@@ -38,25 +41,29 @@ export default function Login({ status }: { status?: string }) {
 
             <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Label htmlFor="username">Usuario</Label>
                     <Input
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
+                        id="username"
+                        type="text"
+                        name="username"
+                        value={data.username}
                         autoComplete="username"
                         autoFocus
-                        onChange={(e) => setData('email', e.target.value)}
-                        placeholder="usuario@ejemplo.com"
+                        onChange={(e) => setData('username', e.target.value)}
+                        placeholder="amontoya"
                     />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                    <p className="text-xs text-muted-foreground">
+                        Tu usuario de @{userDomain}
+                    </p>
+                    {errors.username && (
+                        <p className="text-sm text-destructive">{errors.username}</p>
+                    )}
                 </div>
 
                 <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input
+                    <PasswordInput
                         id="password"
-                        type="password"
                         name="password"
                         value={data.password}
                         autoComplete="current-password"

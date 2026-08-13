@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { LogOut, Moon, Sun, UserRound } from 'lucide-react';
+import { LogOut, Menu, Moon, Sun, UserRound } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useTheme } from '@/components/brand/ThemeProvider';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 import type { UserData } from '@/types';
 
-export function Header({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export function Header({ onOpenMobile }: { onOpenMobile: () => void }) {
     const user = usePage().props.auth.user as UserData;
     const { theme, toggle } = useTheme();
+    const userDomain = usePage().props.app.user_domain;
 
     return (
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-card/80 px-4 backdrop-blur sm:px-6">
@@ -25,11 +25,11 @@ export function Header({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={onToggle}
+                    onClick={onOpenMobile}
                     className="text-muted-foreground lg:hidden"
-                    aria-label="Alternar menú"
+                    aria-label="Abrir menú"
                 >
-                    <PanelIcon collapsed={collapsed} />
+                    <Menu className="h-5 w-5" />
                 </Button>
                 <div className="hidden text-sm text-muted-foreground sm:block">
                     {user.current_position ? (
@@ -69,11 +69,13 @@ export function Header({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
                     <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuLabel>
                             <p className="text-sm font-medium text-foreground">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {user.username}@{userDomain}
+                            </p>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link href="/profile">
+                            <Link prefetch href="/profile">
                                 <UserRound /> Mi perfil
                             </Link>
                         </DropdownMenuItem>
@@ -88,22 +90,5 @@ export function Header({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
                 </DropdownMenu>
             </div>
         </header>
-    );
-}
-
-function PanelIcon({ collapsed }: { collapsed: boolean }) {
-    return (
-        <svg
-            className={cn('h-5 w-5', collapsed && 'rotate-180')}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M9 3v18" />
-        </svg>
     );
 }

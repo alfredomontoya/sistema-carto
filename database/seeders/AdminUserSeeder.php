@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Position;
 use App\Models\PositionAssignment;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Database\Seeder;
 
 class AdminUserSeeder extends Seeder
@@ -14,8 +15,12 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        $email = env('ADMIN_EMAIL') !== null
+            ? env('ADMIN_EMAIL')
+            : UserService::emailFor(env('ADMIN_USERNAME', 'admin'));
+
         $admin = User::updateOrCreate(
-            ['email' => env('ADMIN_EMAIL', 'admin@example.com')],
+            ['email' => $email],
             [
                 'name' => 'Administrador',
                 'password' => env('ADMIN_PASSWORD', 'password'),

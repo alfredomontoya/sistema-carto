@@ -54,8 +54,10 @@ class CommunicationAreaFilterTest extends TestCase
             ->component('Communications/Index')
             ->has('areas', 2)
             ->where('filters.area_id', $this->carto->id)
-            ->has('communications', 1)
-            ->where('communications.0.area.code', 'carto')
+            ->reloadOnly('communications', function ($page) {
+                $page->has('communications', 1)
+                    ->where('communications.0.area.code', 'carto');
+            })
         );
     }
 
@@ -68,7 +70,10 @@ class CommunicationAreaFilterTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('filters.area_id', 'all')
-            ->has('communications', 2)
+            ->reloadOnly(['communications', 'pagination'], function ($page) {
+                $page->has('communications', 2)
+                    ->where('pagination.total', 2);
+            })
         );
     }
 
@@ -81,8 +86,10 @@ class CommunicationAreaFilterTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('filters.area_id', $this->taes->id)
-            ->has('communications', 1)
-            ->where('communications.0.area.code', 'taes')
+            ->reloadOnly('communications', function ($page) {
+                $page->has('communications', 1)
+                    ->where('communications.0.area.code', 'taes');
+            })
         );
     }
 

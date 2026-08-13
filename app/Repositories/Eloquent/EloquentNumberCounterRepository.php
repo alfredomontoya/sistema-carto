@@ -61,13 +61,18 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
         });
     }
 
-    public function resetForArea(string $areaId, int $year): void
+    public function resetForArea(string $areaId, int $year, array $types = []): void
     {
-        AreaNumberCounter::where('area_id', $areaId)
-            ->where('year', $year)
-            ->update(['last_sequence' => 0]);
+        $query = AreaNumberCounter::where('area_id', $areaId)
+            ->where('year', $year);
 
-        foreach (['ci', 'of'] as $type) {
+        if ($types !== []) {
+            $query->whereIn('type', $types);
+        }
+
+        $query->update(['last_sequence' => 0]);
+
+        foreach (($types !== [] ? $types : ['ci', 'of']) as $type) {
             AreaNumberCounter::updateOrCreate(
                 ['area_id' => $areaId, 'year' => $year, 'type' => $type],
                 ['last_sequence' => 0],

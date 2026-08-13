@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Repositories\Contracts\UserRepository;
+use App\Services\UserService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 
 class StoreUserRequest extends FormRequest
@@ -14,11 +15,21 @@ class StoreUserRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
+    public function rules(UserRepository $users): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'username' => [
+                'required',
+                'string',
+                'max:64',
+                'regex:/^[a-z0-9._-]+$/i',
+                function (string $attribute, mixed $value, $fail) use ($users): void {
+                    if ($users->findByEmail(UserService::emailFor($value)) !== null) {
+                        $fail('El usuario ya se encuentra registrado.');
+                    }
+                },
+            ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:255'],

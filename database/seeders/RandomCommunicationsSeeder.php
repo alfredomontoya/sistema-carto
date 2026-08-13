@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\CommunicationService;
 use App\Services\UserService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
@@ -44,6 +45,7 @@ class RandomCommunicationsSeeder extends Seeder
 
         $summary = ['ci' => 0, 'of' => 0, 'anuladas' => 0];
         $byArea = [];
+        $createdAt = Carbon::create(2026, 1, 1, 0, 0, 0);
 
         for ($i = 0; $i < self::COUNT; $i++) {
             $user = $users->random();
@@ -52,8 +54,9 @@ class RandomCommunicationsSeeder extends Seeder
             $communication = $service->create($user, $this->payload($type, $users));
 
             $communication->update([
-                'created_at' => fake()->dateTimeBetween(now()->startOfYear(), now()),
+                'created_at' => $createdAt->copy(),
             ]);
+            $createdAt->addHours(8);
 
             $areaCode = $communication->area?->code ?? 'sin-area';
             $byArea[$areaCode] = ($byArea[$areaCode] ?? 0) + 1;
@@ -116,7 +119,7 @@ class RandomCommunicationsSeeder extends Seeder
 
             foreach ($area->positions as $position) {
                 $user = User::firstOrCreate(
-                    ['email' => "demo-{$area->code}-{$position->code}@example.com"],
+                    ['email' => \App\Services\UserService::emailFor("demo-{$area->code}-{$position->code}")],
                     [
                         'name' => "Demo {$area->name} - {$position->name}",
                         'password' => Hash::make('password'),
@@ -142,6 +145,6 @@ class RandomCommunicationsSeeder extends Seeder
      */
     private function removeLegacyDemoUsers(Area $area): void
     {
-        User::where('email', "demo-{$area->code}@example.com")->delete();
+        User::where('email', \App\Services\UserService::emailFor("demo-{$area->code}"))->delete();
     }
 }

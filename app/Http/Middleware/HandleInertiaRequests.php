@@ -42,6 +42,10 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+            'app' => [
+                'name' => (string) config('app.name'),
+                'user_domain' => (string) config('auth.user_domain'),
+            ],
             'auth' => [
                 'user' => $user ? UserResource::make($user)->resolve() : null,
             ],

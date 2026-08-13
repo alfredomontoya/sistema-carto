@@ -6,10 +6,11 @@ import { FormEventHandler } from 'react';
 
 export default function UpdateProfileInformation() {
     const user = usePage().props.auth.user!;
+    const userDomain = usePage().props.app.user_domain;
 
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
         name: user.name,
-        email: user.email,
+        username: user.username,
         phone: user.phone ?? '',
         address: user.address ?? '',
     });
@@ -33,15 +34,19 @@ export default function UpdateProfileInformation() {
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="username">Usuario</Label>
                 <Input
-                    id="email"
-                    type="email"
-                    value={data.email}
-                    onChange={(e) => setData('email', e.target.value)}
+                    id="username"
+                    value={data.username}
+                    onChange={(e) => setData('username', e.target.value)}
                     autoComplete="username"
                 />
-                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                <p className="text-xs text-muted-foreground">
+                    Tu usuario de acceso. El correo será {data.username || 'usuario'}@{userDomain}
+                </p>
+                {errors.username && (
+                    <p className="text-sm text-destructive">{errors.username}</p>
+                )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

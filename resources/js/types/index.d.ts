@@ -47,6 +47,7 @@ export interface UserData {
     id: string;
     name: string;
     email: string;
+    username: string;
     phone: string | null;
     address: string | null;
     avatar_kind: 'gallery' | 'upload';
@@ -73,6 +74,11 @@ export interface BrandData {
     favicon_file: string | null;
     logo_url: string | null;
     favicon_url: string | null;
+}
+
+export interface AppData {
+    name: string;
+    user_domain: string;
 }
 
 export interface CommunicationData {
@@ -130,6 +136,7 @@ export interface FlashData {
 
 declare module '@inertiajs/core' {
     interface PageProps extends InertiaPageProps {
+        app: AppData;
         auth: {
             user: UserData | null;
         };

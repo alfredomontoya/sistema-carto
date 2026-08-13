@@ -1,9 +1,10 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Switch } from '@/components/ui/switch';
 import {
     Select,
@@ -27,10 +28,11 @@ export function UserForm({
     mode: 'create' | 'edit';
 }) {
     const isEdit = mode === 'edit';
+    const userDomain = usePage().props.app.user_domain;
 
     const { data, setData, post, put, processing, errors } = useForm({
         name: user?.name ?? '',
-        email: user?.email ?? '',
+        username: user?.username ?? '',
         phone: user?.phone ?? '',
         address: user?.address ?? '',
         password: '',
@@ -71,14 +73,20 @@ export function UserForm({
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Label htmlFor="username">Usuario</Label>
                     <Input
-                        id="email"
-                        type="email"
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
+                        id="username"
+                        value={data.username}
+                        onChange={(e) => setData('username', e.target.value)}
+                        placeholder="amontoya"
                     />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                    <p className="text-xs text-muted-foreground">
+                        Usuario de acceso. El correo será {data.username || 'usuario'}
+                        @{userDomain}
+                    </p>
+                    {errors.username && (
+                        <p className="text-sm text-destructive">{errors.username}</p>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -105,9 +113,8 @@ export function UserForm({
                     <>
                         <div className="space-y-2">
                             <Label htmlFor="password">Contraseña</Label>
-                            <Input
+                            <PasswordInput
                                 id="password"
-                                type="password"
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                             />
@@ -117,9 +124,8 @@ export function UserForm({
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password_confirmation">Confirmar contraseña</Label>
-                            <Input
+                            <PasswordInput
                                 id="password_confirmation"
-                                type="password"
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
                             />

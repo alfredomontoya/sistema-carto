@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetAreaNumberingRequest;
 use App\Http\Requests\Admin\StoreAreaRequest;
 use App\Http\Requests\Admin\UpdateAreaRequest;
 use App\Services\AreaService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,7 +20,7 @@ class AreaController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Areas/Index', [
-            'areas' => $this->areas->tree(),
+            'areas' => Inertia::defer(fn () => $this->areas->tree()),
         ]);
     }
 
@@ -49,7 +49,7 @@ class AreaController extends Controller
         return redirect()->route('admin.areas.index')->with('success', 'Área actualizada correctamente.');
     }
 
-    public function resetNumbering(Request $request, string $id): RedirectResponse
+    public function resetNumbering(ResetAreaNumberingRequest $request, string $id): RedirectResponse
     {
         $area = $this->areas->find($id);
 
@@ -57,7 +57,10 @@ class AreaController extends Controller
             abort(404);
         }
 
-        $reset = $this->areas->resetNumbering($area);
+        $force = $request->boolean('force');
+        $types = $request->validated('types');
+
+        $reset = $this->areas->resetNumbering($area, null, $force, $types);
 
         if (! $reset) {
             return redirect()->route('admin.areas.index')
@@ -65,7 +68,9 @@ class AreaController extends Controller
         }
 
         return redirect()->route('admin.areas.index')
-            ->with('success', "Numeración de {$area->name} reiniciada.");
+            ->with('success', $force
+                ? "Numeración de {$area->name} reiniciada. Las comunicaciones existentes se conservan."
+                : "Numeración de {$area->name} reiniciada.");
     }
 
     public function destroy(Request $request, string $id): RedirectResponse

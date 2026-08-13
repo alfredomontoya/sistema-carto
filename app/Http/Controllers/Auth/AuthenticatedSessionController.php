@@ -39,7 +39,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->regenerateToken();
 
             throw ValidationException::withMessages([
-                'email' => 'Tu cuenta está desactivada. Contacta al administrador.',
+                'username' => 'Tu cuenta está desactivada. Contacta al administrador.',
             ]);
         }
 

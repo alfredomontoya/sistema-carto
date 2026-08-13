@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, History, KeyRound, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { UserForm } from '@/components/admin/UserForm';
@@ -16,8 +16,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout';
 import type { AreaNode, PositionHistoryEntry, RoleData, UserData } from '@/types';
@@ -33,6 +33,8 @@ export default function Edit({
     areas: AreaNode[];
     position_history: PositionHistoryEntry[];
 }) {
+    const userDomain = usePage().props.app.user_domain;
+
     const [resetOpen, setResetOpen] = React.useState(false);
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
@@ -63,7 +65,7 @@ export default function Edit({
             <div className="mx-auto max-w-5xl space-y-6">
                 <PageHeader
                     title={user.name}
-                    description={user.email}
+                    description={`${user.username}@${userDomain}`}
                     actions={
                         <>
                             <Button variant="outline" asChild>
@@ -163,9 +165,8 @@ export default function Edit({
                                     <form onSubmit={resetPassword} className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="reset-pass">Nueva contraseña</Label>
-                                            <Input
+                                            <PasswordInput
                                                 id="reset-pass"
-                                                type="password"
                                                 value={resetForm.data.password}
                                                 onChange={(e) => resetForm.setData('password', e.target.value)}
                                             />
@@ -175,9 +176,8 @@ export default function Edit({
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="reset-pass-confirm">Confirmar contraseña</Label>
-                                            <Input
+                                            <PasswordInput
                                                 id="reset-pass-confirm"
-                                                type="password"
                                                 value={resetForm.data.password_confirmation}
                                                 onChange={(e) =>
                                                     resetForm.setData('password_confirmation', e.target.value)

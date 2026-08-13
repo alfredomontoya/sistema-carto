@@ -1,58 +1,45 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Carto
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema de información para la gestión de **comunicaciones internas (`ci`)** y **oficios externos (`of`)** con numeración correlativa por área de trabajo.
 
-## About Laravel
+**Stack**: Laravel 13 + Inertia 2 + React 19 + TypeScript (estricto) + Tailwind CSS v4 + shadcn/ui.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Documentación
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Archivo | Contenido |
+| --- | --- |
+| [`domain.md`](./domain.md) | **Lógica de negocio** (fuente canónica): correlativo y numeración, áreas y puestos, asignaciones, comunicaciones, marca, datos de ejemplo. |
+| [`stack.md`](./stack.md) | Stack tecnológico, arquitectura backend (repositorios/servicios), estructura frontend y comandos. |
+| [`requirements.md`](./requirements.md) | Requisitos funcionales del sistema. |
+| [`AGENTS.md`](./AGENTS.md) | Guía para agentes de IA: comandos y convenciones de backend/frontend. |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Puesta en marcha
 
 ```bash
-composer require laravel/boost --dev
+composer install
+npm install
+cp .env.example .env
 
-php artisan boost:install
+php artisan key:generate
+php artisan migrate:fresh --seed
+
+npm run dev       # Vite dev
+php artisan serve # servidor de desarrollo
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Credenciales de ejemplo (ver `domain.md` → Datos de ejemplo): `admin` / `password`.
 
-## Contributing
+## Verificación
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- `npm run lint` — typecheck TypeScript (`tsc --noEmit`)
+- `npm run build` — `tsc && vite build`
+- `php artisan migrate:fresh --seed` — bases + datos de ejemplo
 
-## Code of Conduct
+## Rutas principales
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- `/dashboard` — inicio
+- `/comunicaciones` — listado, creación y edición de comunicaciones
+- `/admin/users` — gestión de usuarios
+- `/admin/areas` — áreas (árbol), puestos y reinicio de numeración
+- `/admin/settings` — ajustes de marca
+- `/profile` — perfil, avatar y contraseña

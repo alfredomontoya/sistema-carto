@@ -53,7 +53,10 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): RedirectResponse
     {
         $user = $this->users->create(
-            $request->safe()->except(['role_ids', 'position_id', 'password_confirmation']),
+            [
+                ...$request->safe()->except(['role_ids', 'position_id', 'password_confirmation', 'username']),
+                'email' => UserService::emailFor($request->string('username')->toString()),
+            ],
             $request->validated('role_ids') ?? [],
             $request->validated('position_id'),
         );
@@ -97,7 +100,10 @@ class UserController extends Controller
             abort(404);
         }
 
-        $this->users->updateProfile($user, $request->safe()->except(['role_ids', 'position_id']));
+        $this->users->updateProfile($user, [
+            ...$request->safe()->except(['role_ids', 'position_id', 'username']),
+            'email' => UserService::emailFor($request->string('username')->toString()),
+        ]);
 
         if ($request->has('role_ids')) {
             $this->users->syncRoles($user, $request->validated('role_ids'));

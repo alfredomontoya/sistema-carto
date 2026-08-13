@@ -1,5 +1,7 @@
 # Requisitos del Sistema
 
+> La **fuente canónica** de la lógica de negocio es [`domain.md`](./domain.md). Este archivo describe los requisitos funcionales en prosa; ante contradicciones, manda `domain.md`.
+
 Sistema de información para la gestión de comunicaciones internas (ci) y oficios externos (of) con numeración correlativa por área de trabajo.
 
 ## Roles y permisos

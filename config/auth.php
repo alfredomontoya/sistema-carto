@@ -22,6 +22,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User Domain
+    |--------------------------------------------------------------------------
+    |
+    | Dominio del correo de los usuarios (ej. "carto"). Los usuarios inician
+    | sesión solo con su usuario y se registran solo con el usuario; el correo
+    | completo se deriva automáticamente como: usuario@USER_DOMAIN
+    |
+    */
+
+    'user_domain' => env('USER_DOMAIN', 'carto.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
     |

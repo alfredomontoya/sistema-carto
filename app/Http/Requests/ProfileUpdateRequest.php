@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Models\User;
+use App\Repositories\Contracts\UserRepository;
+use App\Services\UserService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
@@ -14,22 +14,27 @@ class ProfileUpdateRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
+    public function rules(UserRepository $users): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'username' => [
+                'sometimes',
                 'required',
                 'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
+                'max:64',
+                'regex:/^[a-z0-9._-]+$/i',
+                function (string $attribute, mixed $value, $fail) use ($users): void {
+                    $existing = $users->findByEmail(UserService::emailFor($value));
+                    if ($existing !== null && $existing->id !== $this->user()->id) {
+                        $fail('El usuario ya se encuentra registrado.');
+                    }
+                },
             ],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'avatar_kind' => ['required', 'string', Rule::in(['gallery', 'upload'])],
-            'avatar_value' => ['nullable', 'string', 'max:255'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'avatar_kind' => ['sometimes', 'required', 'string', \Illuminate\Validation\Rule::in(['gallery', 'upload'])],
+            'avatar_value' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 }

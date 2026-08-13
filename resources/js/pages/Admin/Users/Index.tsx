@@ -36,6 +36,7 @@ export default function UsersIndex({
     pagination: PaginationData;
 }) {
     const user = usePage().props.auth.user!;
+    const userDomain = usePage().props.app.user_domain;
     const [search, setSearch] = React.useState(filters.search ?? '');
     const [role, setRole] = React.useState(filters.role ?? '');
     const [areaId, setAreaId] = React.useState(filters.area_id ?? '');
@@ -76,7 +77,7 @@ export default function UsersIndex({
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     className="pl-9"
-                                    placeholder="Buscar por nombre o correo…"
+                                    placeholder="Buscar por nombre o usuario…"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
@@ -142,7 +143,9 @@ export default function UsersIndex({
                                                 <UserAvatar user={u} />
                                                 <div>
                                                     <p className="font-medium text-foreground">{u.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{u.email}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {u.username}@{userDomain}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </TableCell>

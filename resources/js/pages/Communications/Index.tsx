@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Deferred, Head, router } from '@inertiajs/react';
 import { Download, FileText, Pencil, Plus, Search, ShieldX } from 'lucide-react';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
@@ -6,6 +6,11 @@ import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
 import { CommunicationShowDialog } from '@/components/communications/CommunicationShowDialog';
 import { CopyNumberButton } from '@/components/communications/CopyNumberButton';
+import {
+    ClearFiltersButton,
+    FilterDropdown,
+    FilterSectionTitle,
+} from '@/components/communications/FilterDropdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,6 +32,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { DataTablePagination } from '@/components/DataTablePagination';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/dates';
 import AppLayout from '@/layouts/AppLayout';
 import type { AreaData, CommunicationData, PaginationData } from '@/types';
@@ -48,10 +54,10 @@ export default function CommunicationsIndex({
     pagination,
     created = null,
 }: {
-    communications: CommunicationData[];
+    communications?: CommunicationData[];
     areas: AreaData[];
     filters: Filters;
-    pagination: PaginationData;
+    pagination?: PaginationData;
     created?: CommunicationData | null;
 }) {
     const [search, setSearch] = React.useState(filters.search ?? '');
@@ -135,8 +141,8 @@ export default function CommunicationsIndex({
 
                 <Card>
                     <div className="border-b p-4">
-                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                            <div className="relative md:col-span-2 lg:col-span-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <div className="relative flex-1">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     className="pl-9"
@@ -145,161 +151,228 @@ export default function CommunicationsIndex({
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
-                            <Select value={type} onValueChange={(v) => setType(v === '__all' ? '' : v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all">Todos los tipos</SelectItem>
-                                    <SelectItem value="ci">Comunicación interna</SelectItem>
-                                    <SelectItem value="of">Oficio externo</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={status} onValueChange={(v) => setStatus(v === '__all' ? '' : v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Estado" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all">Activos y anulados</SelectItem>
-                                    <SelectItem value="activo">Solo activos</SelectItem>
-                                    <SelectItem value="anulado">Solo anulados</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={areaId} onValueChange={(v) => setAreaId(v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Área" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las áreas</SelectItem>
-                                    {areas.map((area) => (
-                                        <SelectItem key={area.id} value={area.id}>
-                                            {area.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                            />
-                            <Input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                            />
+                            <FilterDropdown
+                                activeCount={
+                                    [type, status, areaId !== 'all' ? areaId : '', dateFrom, dateTo].filter(
+                                        Boolean,
+                                    ).length
+                                }
+                            >
+                                <div className="space-y-4">
+                                    <div>
+                                        <FilterSectionTitle>Tipo</FilterSectionTitle>
+                                        <Select value={type} onValueChange={(v) => setType(v === '__all' ? '' : v)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Todos los tipos" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__all">Todos los tipos</SelectItem>
+                                                <SelectItem value="ci">Comunicación interna</SelectItem>
+                                                <SelectItem value="of">Oficio externo</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <FilterSectionTitle>Estado</FilterSectionTitle>
+                                        <Select value={status} onValueChange={(v) => setStatus(v === '__all' ? '' : v)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Activos y anulados" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__all">Activos y anulados</SelectItem>
+                                                <SelectItem value="activo">Solo activos</SelectItem>
+                                                <SelectItem value="anulado">Solo anulados</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <FilterSectionTitle>Área</FilterSectionTitle>
+                                        <Select value={areaId} onValueChange={(v) => setAreaId(v)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Todas las áreas" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todas las áreas</SelectItem>
+                                                {areas.map((area) => (
+                                                    <SelectItem key={area.id} value={area.id}>
+                                                        {area.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <FilterSectionTitle>Desde</FilterSectionTitle>
+                                            <Input
+                                                type="date"
+                                                value={dateFrom}
+                                                onChange={(e) => setDateFrom(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <FilterSectionTitle>Hasta</FilterSectionTitle>
+                                            <Input
+                                                type="date"
+                                                value={dateTo}
+                                                onChange={(e) => setDateTo(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <ClearFiltersButton
+                                        onClick={() => {
+                                            setType('');
+                                            setStatus('');
+                                            setAreaId('all');
+                                            setDateFrom('');
+                                            setDateTo('');
+                                        }}
+                                    />
+                                </div>
+                            </FilterDropdown>
                         </div>
                     </div>
 
                     <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Número</TableHead>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Remitente</TableHead>
-                                    <TableHead>Destinatario</TableHead>
-                                    <TableHead>Área</TableHead>
-                                    <TableHead>Fecha</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {communications.length === 0 && (
+                        <Deferred
+                            data="communications"
+                            fallback={
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Número</TableHead>
+                                            <TableHead>Tipo</TableHead>
+                                            <TableHead>Remitente</TableHead>
+                                            <TableHead>Destinatario</TableHead>
+                                            <TableHead>Área</TableHead>
+                                            <TableHead>Fecha</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {Array.from({ length: 6 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={8}>
+                                                    <Skeleton className="h-6 w-full" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            }
+                        >
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                                            No hay registros con los filtros actuales.
-                                        </TableCell>
+                                        <TableHead>Número</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Remitente</TableHead>
+                                        <TableHead>Destinatario</TableHead>
+                                        <TableHead>Área</TableHead>
+                                        <TableHead>Fecha</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
                                     </TableRow>
-                                )}
-                                {communications.map((c) => (
-                                    <TableRow key={c.id} className={c.status === 'anulado' ? 'opacity-60' : ''}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelected(c)}
-                                                    title="Ver detalle"
-                                                    className="font-mono text-sm font-medium text-primary hover:underline"
-                                                >
-                                                    {c.number}
-                                                </button>
-                                                <CopyNumberButton value={c.number} />
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={c.type === 'ci' ? 'secondary' : 'outline'}>
-                                                {c.type === 'ci' ? 'Interna' : 'Externo'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <p className="text-sm font-medium">{c.user?.name ?? '—'}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {c.position?.name ?? '—'}
-                                                {c.user?.current_area ? ` · ${c.user.current_area.name}` : ''}
-                                            </p>
-                                        </TableCell>
-                                        <TableCell>
-                                            <p className="text-sm">{c.recipient_name}</p>
-                                            {c.recipient_position && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {c.recipient_position}
-                                                </p>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-sm">{c.area?.name ?? '—'}</TableCell>
-                                        <TableCell className="whitespace-nowrap text-sm">
-                                            {formatDateTime(c.created_at)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={c.status === 'activo' ? 'success' : 'warning'}>
-                                                {c.status === 'activo' ? 'Activo' : 'Anulado'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex justify-end gap-1">
-                                                {c.file_name && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        onClick={() => window.open(c.download_url!, '_blank')}
-                                                        title={c.file_name}
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                                {c.can_edit && (
-                                                    <>
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <a href={`/comunicaciones/${c.id}/editar`}>
-                                                                <Pencil /> Editar
-                                                            </a>
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => setAnnulTarget(c)}
-                                                        >
-                                                            <ShieldX /> Anular
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {!c.can_edit && !c.file_name && (
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
-                                                        <FileText className="h-4 w-4 text-muted-foreground" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {communications?.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                                No hay registros con los filtros actuales.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {communications?.map((c) => (
+                                                <TableRow key={c.id} className={c.status === 'anulado' ? 'opacity-60' : ''}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelected(c)}
+                                                                title="Ver detalle"
+                                                                className="font-mono text-sm font-medium text-primary hover:underline"
+                                                            >
+                                                                {c.number}
+                                                            </button>
+                                                            <CopyNumberButton value={c.number} />
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={c.type === 'ci' ? 'secondary' : 'outline'}>
+                                                            {c.type === 'ci' ? 'Interna' : 'Externo'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <p className="text-sm font-medium">{c.user?.name ?? '—'}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {c.position?.name ?? '—'}
+                                                            {c.user?.current_area ? ` · ${c.user.current_area.name}` : ''}
+                                                        </p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <p className="text-sm">{c.recipient_name}</p>
+                                                        {c.recipient_position && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {c.recipient_position}
+                                                            </p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm">{c.area?.name ?? '—'}</TableCell>
+                                                    <TableCell className="whitespace-nowrap text-sm">
+                                                        {formatDateTime(c.created_at)}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={c.status === 'activo' ? 'success' : 'warning'}>
+                                                            {c.status === 'activo' ? 'Activo' : 'Anulado'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex justify-end gap-1">
+                                                            {c.file_name && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    onClick={() => window.open(c.download_url!, '_blank')}
+                                                                    title={c.file_name}
+                                                                >
+                                                                    <Download className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            {c.can_edit && (
+                                                                <>
+                                                                    <Button variant="outline" size="sm" asChild>
+                                                                        <a href={`/comunicaciones/${c.id}/editar`}>
+                                                                            <Pencil /> Editar
+                                                                        </a>
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={() => setAnnulTarget(c)}
+                                                                    >
+                                                                        <ShieldX /> Anular
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                            {!c.can_edit && !c.file_name && (
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+                                                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                        </Deferred>
                     </div>
 
-                    <DataTablePagination pagination={pagination} filters={filters} />
+                    <Deferred data="pagination" fallback={null}>
+                        <DataTablePagination pagination={pagination!} filters={filters} />
+                    </Deferred>
                 </Card>
             </div>
 
