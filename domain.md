@@ -52,9 +52,10 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 - Campos:
   - **Área**: la del puesto del usuario logueado (no editable; puede diferir del área de numeración).
   - **Puesto**: el del usuario al crear (se guarda `position_id`; si cambia de puesto después, la comunicación conserva el puesto original).
-  - **Referencia**: texto libre.
+  - **Referencia**: texto libre (input de una línea).
   - **Remitente**: nombre y puesto del usuario logueado (no editable).
-  - **Destinatario**: nombre y puesto (buscador de usuarios internos + texto libre).
+  - **Destinatario**: nombre y puesto (buscador de usuarios internos + texto libre). Ambos obligatorios.
+  - **Área destino**: opcional, con doble modalidad — selección de un área registrada (autocomplete `/areas/buscar`, top 10, navegable con ↑/↓/Enter/click, limpiable a nulo) o nombre en texto libre. Se guarda `area_destino_id` (FK nullable) + `area_destino_nombre`. **Obligatoria (el nombre) cuando es `ci`**; opcional en `of`.
   - **Adjunto**: opcional, PDF, Word o imagen.
 - **Estado**: `activo` o `anulado`. **Anular no libera el número**.
 - **Solo el creador puede editar** una comunicación mientras esté activa (`CommunicationPolicy::update`).
@@ -90,7 +91,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 ## Marca y tema
 
 - Defaults en `config/brand.php` y `config/avatars.php`.
-- La pantalla admin (`/admin/settings`) los sobreescribe en BD (`SettingsRepository` / `BrandSettingsService`), priorizando BD sobre config.
+- La pantalla admin (`/admin/settings`) solo expone el **nombre del sistema** (`brand.app_name`); colores, logo y favicon guardados previamente se siguen aplicando pero ya no son editables desde la UI.
 - Variables CSS de marca: `--brand-primary`, `--brand-secondary`; en runtime `BrandThemeProvider` las aplica desde las props compartidas `brand`.
 - El color primario se aplica como acento de la interfaz (botones, enlaces, selección activa) y al progreso de navegación Inertia.
 - `BrandSettingsService` cachea la marca (`brand.settings`, TTL 1 hora) para evitar consultas repetidas por request; `update()` invalida la caché con `Cache::forget`.
@@ -110,6 +111,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 
 - Anular no libera el número; los correlativos nunca se reutilizan.
 - `communications.area_id` guarda el área real, no el área de numeración.
+- El área destino es obligatoria (nombre) en `ci` y opcional en `of`; puede ser área registrada o texto libre.
 - `User::currentArea` es accesor, no relación: cargar con `currentAssignment.position.area`.
 - Siempre consultar la asignación actual con `$user->currentAssignment()->first()` (no la relación cacheada).
 - Eliminar un usuario con comunicaciones creadas está bloqueado.

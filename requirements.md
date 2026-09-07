@@ -30,7 +30,8 @@ El registro público y la recuperación de contraseña no existen; solo el admin
   - **Puesto**: el del usuario logueado al crear (se guarda `position_id`; si cambia de puesto, la comunicación conserva el puesto original).
   - **Referencia**: texto libre.
   - **Remitente**: nombre y puesto del usuario logueado (no editable).
-  - **Destinatario**: nombre y puesto (buscador de usuarios internos + texto libre).
+  - **Destinatario**: nombre y puesto, ambos obligatorios (buscador de usuarios internos + texto libre).
+  - **Área destino**: nombre de área registrada (buscador) o texto libre; obligatoria en comunicaciones internas, opcional en oficios.
   - **Adjunto**: opcional, PDF, Word o imagen.
 - Cada comunicación recibe un número correlativo por área, tipo (ci/of) y año con formato `prefijo.codigo_area.secuencia/año` (ejemplo `ci.carto.0001/2026`).
 - El correlativo no se reutiliza aunque se anule una comunicación.
@@ -38,9 +39,9 @@ El registro público y la recuperación de contraseña no existen; solo el admin
 - Anulación: la comunicación pasa a estado `anulado`; deja de mostrarse en la lista activa pero queda consultable (histórico) y su número no se reasigna.
 - Búsqueda por remitente, destinatario, número de comunicación y rango de fechas.
 
-## Ajustes de marca
+## Ajustes
 
-- Personalizables desde pantalla admin y con valores por defecto en código: nombre del sistema, color primario, color secundario, logo y favicon.
+- Solo el nombre del sistema es editable desde la pantalla admin (los colores, logo y favicon guardados se siguen aplicando).
 - El color primario se aplica como acento de la interfaz (botones, enlaces, selección activa) y al progreso de navegación Inertia.
 
 ## Portabilidad

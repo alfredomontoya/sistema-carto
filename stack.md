@@ -12,9 +12,9 @@
 - **Repositorios** en `app/Repositories/Contracts` + implementaciones `app/Repositories/Eloquent`; bindings en `app/Providers/RepositoryServiceProvider` (registrado en `bootstrap/providers.php`).
 - **Servicios** en `app/Services` (lógica de negocio):
   - `NumberSequenceService` — formato y asignación de correlativos (`prefijo.codigo_area.secuencia/año`).
-  - `CommunicationService` — creación/edición/anulación de comunicaciones y archivos.
+  - `CommunicationService` — creación/edición/anulación de comunicaciones y archivos; stats de dashboard con caché versionada (sin tags, portable a database/file).
   - `UserService` (asignación de puestos con historial), `AreaService`, `PositionService`, `BrandSettingsService`.
-- **Repositorios**: `AreaRepository`, `PositionRepository`, `UserRepository`, `CommunicationRepository`, `NumberCounterRepository`, `SettingsRepository`, `RoleRepository`.
+- **Repositorios**: `AreaRepository` (+ `search` para autocomplete), `PositionRepository`, `UserRepository`, `CommunicationRepository` (+ `getMonthlyStats`, `getAvailableYears`, `getDestinoStats` con identificadores citados para MySQL), `NumberCounterRepository`, `SettingsRepository`, `RoleRepository`.
 - **Resources**: `UserResource`, `AreaResource`, `CommunicationResource`.
 - **Políticas**: `CommunicationPolicy` (solo el creador edita; anular = editar activa).
 - **Middleware** `HandleInertiaRequests` comparte `auth.user`, `brand` y `flash`.
@@ -22,12 +22,12 @@
 ### Rutas
 
 - `/dashboard`, `/profile` (info, avatar, contraseña)
-- `/comunicaciones` (index, create, edit, annul, download)
+- `/comunicaciones` (index, create, edit, annul, download; crear se abre en modal)
 - `/admin/users` (index, create, edit, reset password)
 - `/admin/areas` (índice con árbol recursivo y CRUD)
 - `/admin/positions` (CRUD de puestos, permiso `manage areas`)
-- `/admin/settings` (marca)
-- `/usuarios/buscar` — autocomplete JSON (auth)
+- `/admin/settings` (solo nombre del sistema)
+- `/usuarios/buscar`, `/areas/buscar` — autocomplete JSON (auth, top 10)
 
 ## Frontend
 
@@ -41,9 +41,9 @@
 
 ### Estructura frontend
 
-- `resources/js/components` — UI shadcn, layout (AppLayout, Sidebar minimizable, Header, Footer), `UserAvatar`, `AvatarPicker`, `FlashMessages`, `DataTablePagination`, `PageHeader`, `RecipientInput`.
+- `resources/js/components` — UI shadcn, layout (AppLayout, Sidebar minimizable, Header, Footer), `UserAvatar`, `AvatarPicker`, `FlashMessages` (toasts de flash + errores de validación vía sonner), `DataTablePagination`, `PageHeader`, `RecipientInput`, `AreaDestinoInput` (autocomplete con teclado), `CommunicationCreateForm` (compartido página/modal), `CommunicationCreateDialog`, `CommunicationShowDialog`.
 - `resources/js/lib` — `area-tree` (árbol a opciones + `positionOptions`), `app-name`, `navigation`, `utils` (cn).
-- `resources/js/pages` — Dashboard, Auth/Login, Profile, Admin/{Users,Areas,Settings}, Communications.
+- `resources/js/pages` — Dashboard (actividad anual + barras por destino con filtros hoy/ayer/semana/mes/rango), Auth/Login, Profile, Admin/{Users,Areas,Settings}, Communications.
 - `resources/js/types` — tipos compartidos (`AreaNode.positions`, `PositionData`, `UserData.current_position`, `CommunicationData.position`) y augment de `PageProps` (`auth.user`, `brand`, `flash`).
 
 ## Marca y tema
