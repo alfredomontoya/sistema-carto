@@ -53,6 +53,7 @@ class CreatedCommunicationFlashTest extends TestCase
             'reference' => 'Comunicación de prueba',
             'recipient_name' => 'Destinatario de prueba',
             'recipient_position' => 'TECNICO',
+            'area_destino_nombre' => 'DEPARTAMENTO DE CARTOGRAFIA',
         ]);
 
         $response->assertRedirect(route('communications.index'));
@@ -60,7 +61,8 @@ class CreatedCommunicationFlashTest extends TestCase
         $response->assertSessionHas('created', function (array $created) {
             return $created['number'] === 'ci.carto.0001/2026'
                 && $created['type'] === 'ci'
-                && ($created['area']['code'] ?? null) === 'carto';
+                && ($created['area']['code'] ?? null) === 'carto'
+                && ($created['area_destino_nombre'] ?? null) === 'DEPARTAMENTO DE CARTOGRAFIA';
         });
     }
 }

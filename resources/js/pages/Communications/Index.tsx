@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
+import { CommunicationCreateDialog } from '@/components/communications/CommunicationCreateDialog';
 import { CommunicationShowDialog } from '@/components/communications/CommunicationShowDialog';
 import { CopyNumberButton } from '@/components/communications/CopyNumberButton';
 import {
@@ -35,7 +36,7 @@ import { DataTablePagination } from '@/components/DataTablePagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/dates';
 import AppLayout from '@/layouts/AppLayout';
-import type { AreaData, CommunicationData, PaginationData } from '@/types';
+import type { AreaData, CommunicationData, CountersData, PaginationData } from '@/types';
 
 type Filters = {
     search?: string;
@@ -52,12 +53,18 @@ export default function CommunicationsIndex({
     areas,
     filters,
     pagination,
+    counters,
+    current_area,
+    year,
     created = null,
 }: {
     communications?: CommunicationData[];
     areas: AreaData[];
     filters: Filters;
     pagination?: PaginationData;
+    counters: CountersData;
+    current_area: string | null;
+    year: number;
     created?: CommunicationData | null;
 }) {
     const [search, setSearch] = React.useState(filters.search ?? '');
@@ -70,6 +77,7 @@ export default function CommunicationsIndex({
     const [annulling, setAnnulling] = useState(false);
     const [fromCreate, setFromCreate] = useState<CommunicationData | null>(null);
     const [selected, setSelected] = useState<CommunicationData | null>(null);
+    const [createOpen, setCreateOpen] = useState(false);
 
     const showTarget = fromCreate ?? selected;
     const dialogOpen = showTarget !== null;
@@ -82,6 +90,7 @@ export default function CommunicationsIndex({
     useEffect(() => {
         if (created !== null) {
             setFromCreate(created);
+            setCreateOpen(false);
         }
     }, [created]);
 
@@ -131,10 +140,8 @@ export default function CommunicationsIndex({
                     title="Comunicaciones y oficios"
                     description="Consulta, crea y administra los correlativos del sistema."
                     actions={
-                        <Button asChild>
-                            <a href="/comunicaciones/crear">
-                                <Plus /> Nueva comunicación
-                            </a>
+                        <Button onClick={() => setCreateOpen(true)}>
+                            <Plus /> Nueva comunicación
                         </Button>
                     }
                 />
@@ -402,6 +409,14 @@ export default function CommunicationsIndex({
                 communication={showTarget}
                 open={dialogOpen}
                 onOpenChange={(o) => !o && closeDialog()}
+            />
+
+            <CommunicationCreateDialog
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+                counters={counters}
+                current_area={current_area}
+                year={year}
             />
         </AppLayout>
     );

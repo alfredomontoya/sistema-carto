@@ -4,7 +4,11 @@ import { toast } from 'sonner';
 import type { FlashData } from '@/types';
 
 export function FlashMessages() {
-    const flash = usePage().props.flash as FlashData;
+    const { flash, errors } = usePage().props as unknown as {
+        flash: FlashData;
+        errors: Record<string, string>;
+    };
+    const errorKey = JSON.stringify(errors ?? {});
 
     React.useEffect(() => {
         if (flash?.success) {
@@ -14,6 +18,14 @@ export function FlashMessages() {
             toast.error(flash.error);
         }
     }, [flash]);
+
+    React.useEffect(() => {
+        if (Object.keys(errors ?? {}).length > 0) {
+            toast.error('Hay errores de validación', {
+                description: 'Revisa los campos marcados en el formulario.',
+            });
+        }
+    }, [errorKey]);
 
     return null;
 }

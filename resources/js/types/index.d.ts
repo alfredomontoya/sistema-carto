@@ -96,6 +96,8 @@ export interface CommunicationData {
     download_url: string | null;
     created_at: string | null;
     area: AreaData | null;
+    area_destino: AreaData | null;
+    area_destino_nombre: string | null;
     position: { id: string; name: string } | null;
     user: UserData | null;
     recipient_user: UserData | null;

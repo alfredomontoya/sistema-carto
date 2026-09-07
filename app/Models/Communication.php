@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'year',
     'sequence',
     'area_id',
+    'area_destino_id',
+    'area_destino_nombre',
     'user_id',
     'position_id',
     'reference',
@@ -47,6 +49,11 @@ class Communication extends Model
     public function area(): BelongsTo
     {
         return $this->belongsTo(Area::class);
+    }
+
+    public function areaDestino(): BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'area_destino_id');
     }
 
     public function user(): BelongsTo

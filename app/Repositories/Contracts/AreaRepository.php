@@ -22,6 +22,11 @@ interface AreaRepository
     public function findByCode(string $code): ?Area;
 
     /**
+     * @return Collection<int, Area>
+     */
+    public function search(string $term, int $limit = 10): Collection;
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Area;

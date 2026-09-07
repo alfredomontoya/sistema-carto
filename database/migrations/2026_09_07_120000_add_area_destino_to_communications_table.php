@@ -7,13 +7,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Allow duplicate correlative numbers after a forced numbering reset.
+     * Run the migrations.
      */
     public function up(): void
     {
         Schema::table('communications', function (Blueprint $table) {
-            $table->dropUnique(['number']);
-            $table->index(['number']);
+            $table->foreignUuid('area_destino_id')->nullable()->constrained('areas')->nullOnDelete();
+            $table->string('area_destino_nombre')->nullable();
+
+            $table->index(['area_destino_id']);
         });
     }
 
@@ -23,8 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('communications', function (Blueprint $table) {
-            $table->dropIndex(['number']);
-            $table->unique(['number']);
+            $table->dropIndex(['area_destino_id']);
+            $table->dropConstrainedForeignId('area_destino_id');
+            $table->dropColumn('area_destino_nombre');
         });
     }
 };

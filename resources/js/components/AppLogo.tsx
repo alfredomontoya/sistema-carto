@@ -38,15 +38,12 @@ export function AppLogo({
 
     return (
         <div className={cn('flex items-center gap-2', className)}>
-            <div
-                className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-primary-foreground',
-                    iconOnly && 'mx-auto',
-                )}
-                style={{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }}
-            >
-                {initials}
-            </div>
+            <img
+                src={brand.favicon_url ?? '/apple-touch-icon.png'}
+                alt={initials || brand.app_name}
+                title={brand.app_name}
+                className={cn('h-9 w-9 shrink-0 rounded-lg object-contain', iconOnly && 'mx-auto')}
+            />
             {!iconOnly && (
                 <span className="truncate text-base font-semibold text-foreground">
                     {brand.app_name}

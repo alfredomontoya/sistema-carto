@@ -25,11 +25,9 @@ class SettingsController extends Controller
     public function update(UpdateBrandSettingsRequest $request): RedirectResponse
     {
         $this->brand->update(
-            $request->safe()->only(['app_name', 'primary_color', 'secondary_color']),
-            $request->file('logo'),
-            $request->file('favicon'),
+            $request->safe()->only(['app_name']),
         );
 
-        return redirect()->route('admin.settings.index')->with('success', 'Ajustes de marca actualizados.');
+        return redirect()->route('admin.settings.index')->with('success', 'Ajustes actualizados.');
     }
 }

@@ -16,10 +16,6 @@ class UpdateBrandSettingsRequest extends FormRequest
     {
         return [
             'app_name' => ['required', 'string', 'max:120'],
-            'primary_color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'secondary_color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,svg,webp', 'max:2048'],
-            'favicon' => ['nullable', 'image', 'mimes:png,ico,svg', 'max:512'],
         ];
     }
 }

@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AreaLookupController;
 use App\Http\Controllers\CommunicationController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserLookupController;
 use Illuminate\Support\Facades\Route;
@@ -13,7 +15,7 @@ use Inertia\Inertia;
 Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -22,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/usuarios/buscar', [UserLookupController::class, 'search'])->name('users.search');
+    Route::get('/areas/buscar', [AreaLookupController::class, 'search'])->name('areas.search');
 
     Route::get('/comunicaciones', [CommunicationController::class, 'index'])->name('communications.index');
     Route::get('/comunicaciones/crear', [CommunicationController::class, 'create'])->name('communications.create');

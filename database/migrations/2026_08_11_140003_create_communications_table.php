@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('communications', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('type', 10);
-            $table->string('number')->unique();
+            $table->string('number')->index();
             $table->integer('year');
             $table->unsignedBigInteger('sequence');
-            $table->foreignUuid('area_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('area_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('user_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('position_id')->nullable()->constrained()->nullOnDelete();
             $table->string('reference');
             $table->string('recipient_name');
             $table->string('recipient_position')->nullable();
@@ -30,9 +31,12 @@ return new class extends Migration
 
             $table->index(['area_id', 'year', 'type']);
             $table->index(['user_id']);
+            $table->index(['position_id']);
             $table->index(['recipient_name']);
             $table->index(['status']);
             $table->index(['created_at']);
+            $table->index(['status', 'year', 'area_id', 'created_at'], 'comms_dashboard_area_idx');
+            $table->index(['status', 'year', 'user_id', 'created_at'], 'comms_dashboard_user_idx');
         });
     }
 

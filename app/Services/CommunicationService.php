@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Repositories\Contracts\CommunicationRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,6 +16,8 @@ class CommunicationService
     public const ALLOWED_EXTENSIONS = [
         'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif', 'webp',
     ];
+
+    private const STATS_CACHE_VERSION_KEY = 'dashboard:stats:version';
 
     public function __construct(
         private readonly CommunicationRepository $communications,
@@ -84,6 +87,8 @@ class CommunicationService
                 'recipient_name' => $data['recipient_name'],
                 'recipient_position' => $data['recipient_position'] ?? null,
                 'recipient_user_id' => $data['recipient_user_id'] ?? null,
+                'area_destino_id' => $data['area_destino_id'] ?? null,
+                'area_destino_nombre' => $data['area_destino_nombre'] ?? null,
                 'status' => Communication::STATUS_ACTIVE,
             ];
 
@@ -92,7 +97,7 @@ class CommunicationService
             }
 
             try {
-                return $this->communications->create($payload);
+                $communication = $this->communications->create($payload);
             } catch (\Throwable $e) {
                 if (($payload['file_path'] ?? null) !== null) {
                     Storage::disk('public')->delete($payload['file_path']);
@@ -100,6 +105,10 @@ class CommunicationService
 
                 throw $e;
             }
+
+            $this->invalidateDashboardStats();
+
+            return $communication;
         });
     }
 
@@ -113,6 +122,8 @@ class CommunicationService
             'recipient_name' => $data['recipient_name'],
             'recipient_position' => $data['recipient_position'] ?? null,
             'recipient_user_id' => $data['recipient_user_id'] ?? null,
+            'area_destino_id' => $data['area_destino_id'] ?? null,
+            'area_destino_nombre' => $data['area_destino_nombre'] ?? null,
         ];
 
         if ($file !== null) {
@@ -129,9 +140,13 @@ class CommunicationService
 
     public function annul(Communication $communication): Communication
     {
-        return $this->communications->update($communication, [
+        $result = $this->communications->update($communication, [
             'status' => Communication::STATUS_ANNULLED,
         ]);
+
+        $this->invalidateDashboardStats();
+
+        return $result;
     }
 
     /**
@@ -140,6 +155,69 @@ class CommunicationService
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return $this->communications->paginate($filters, $perPage);
+    }
+
+    public function getDashboardStats(User $user, int $year): array
+    {
+        $cacheKey = $this->buildStatsCacheKey($user, $year);
+
+        return Cache::remember($cacheKey, 300, function () use ($user, $year) {
+            $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+
+            $areaId = $isAdmin ? null : $user->currentArea?->id;
+            $userId = $isAdmin ? null : $user->id;
+
+            return $this->communications->getMonthlyStats($year, $areaId, $userId);
+        });
+    }
+
+    public function getDestinoStats(User $user, string $from, string $to): array
+    {
+        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}";
+
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin) {
+            $areaId = $isAdmin ? null : $user->currentArea?->id;
+            $userId = $isAdmin ? null : $user->id;
+
+            return $this->communications->getDestinoStats($from, $to, $areaId, $userId);
+        });
+    }
+
+    public function getAvailableYears(User $user): array
+    {
+        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $cacheKey = "dashboard:years:v{$this->statsVersion()}:{$scope}";
+
+        return Cache::remember($cacheKey, 3600, function () use ($user, $isAdmin) {
+            $areaId = $isAdmin ? null : $user->currentArea?->id;
+            $userId = $isAdmin ? null : $user->id;
+
+            return $this->communications->getAvailableYears($areaId, $userId);
+        });
+    }
+
+    private function buildStatsCacheKey(User $user, int $year): string
+    {
+        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        return "dashboard:stats:v{$this->statsVersion()}:{$scope}:{$year}";
+    }
+
+    private function statsVersion(): int
+    {
+        return (int) Cache::rememberForever(self::STATS_CACHE_VERSION_KEY, fn (): int => 1);
+    }
+
+    private function invalidateDashboardStats(): void
+    {
+        if (! Cache::has(self::STATS_CACHE_VERSION_KEY)) {
+            Cache::forever(self::STATS_CACHE_VERSION_KEY, 1);
+        }
+
+        Cache::increment(self::STATS_CACHE_VERSION_KEY);
     }
 
     public function find(string $id): ?Communication

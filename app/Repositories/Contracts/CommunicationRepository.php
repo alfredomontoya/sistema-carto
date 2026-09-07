@@ -32,4 +32,19 @@ interface CommunicationRepository
     public function deleteAll(): int;
 
     public function countForAreaYearType(string $areaId, string $type, int $year): int;
+
+    /**
+     * @return array<int, array{month: int, ci: int, of: int, total: int}>
+     */
+    public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array;
+
+    /**
+     * @return array<int, array{destino: string, ci: int, of: int, total: int}>
+     */
+    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null): array;
+
+    /**
+     * @return array<int, int>
+     */
+    public function getAvailableYears(?string $areaId = null, ?string $userId = null): array;
 }

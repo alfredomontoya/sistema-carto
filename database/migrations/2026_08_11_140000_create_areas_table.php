@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('areas', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('parent_id')->nullable();
+            $table->foreignUuid('numbering_area_id')->nullable()->constrained('areas')->nullOnDelete();
             $table->string('code', 50)->unique();
             $table->string('name');
             $table->string('description')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('reset_annually')->default(true);
             $table->timestamps();
 
             $table->foreign('parent_id')

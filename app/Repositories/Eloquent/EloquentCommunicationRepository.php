@@ -10,7 +10,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
 {
     public function find(string $id): ?Communication
     {
-        return Communication::with(['area', 'position', 'user.currentAssignment.position.area', 'recipientUser.currentAssignment.position.area'])->find($id);
+        return Communication::with(['area', 'areaDestino', 'position', 'user.currentAssignment.position.area', 'recipientUser.currentAssignment.position.area'])->find($id);
     }
 
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
@@ -52,5 +52,86 @@ class EloquentCommunicationRepository implements CommunicationRepository
             ->where('type', $type)
             ->where('year', $year)
             ->count();
+    }
+
+    /**
+     * @return array<int, array{month: int, ci: int, of: int, total: int}>
+     */
+    public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array
+    {
+        $query = Communication::query()
+            ->selectRaw('
+                MONTH(`created_at`) as `month`,
+                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `ci`,
+                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `of`,
+                COUNT(*) as `total`
+            ', [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
+            ->whereYear('created_at', $year)
+            ->where('status', Communication::STATUS_ACTIVE);
+
+        if ($areaId) $query->where('area_id', $areaId);
+        if ($userId) $query->where('user_id', $userId);
+
+        return $query->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month')
+            ->map(fn ($row) => [
+                'month' => (int) $row->month,
+                'ci' => (int) $row->ci,
+                'of' => (int) $row->of,
+                'total' => (int) $row->total,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function getAvailableYears(?string $areaId = null, ?string $userId = null): array
+    {
+        $query = Communication::query()
+            ->selectRaw('DISTINCT YEAR(`created_at`) as `year`')
+            ->where('status', Communication::STATUS_ACTIVE)
+            ->orderByDesc('year');
+
+        if ($areaId) $query->where('area_id', $areaId);
+        if ($userId) $query->where('user_id', $userId);
+
+        return $query->pluck('year')->all();
+    }
+
+    /**
+     * @return array<int, array{destino: string, ci: int, of: int, total: int}>
+     */
+    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null): array
+    {
+        $query = Communication::query()
+            ->selectRaw("
+                COALESCE(NULLIF(`area_destino_nombre`, ''), 'Sin destino') as `destino`,
+                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `ci`,
+                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `of`,
+                COUNT(*) as `total`
+            ", [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->where('status', Communication::STATUS_ACTIVE);
+
+        if ($areaId) $query->where('area_id', $areaId);
+        if ($userId) $query->where('user_id', $userId);
+
+        return $query->groupBy('destino')
+            ->orderByDesc('total')
+            ->limit(15)
+            ->get()
+            ->map(fn ($row) => [
+                'destino' => (string) $row->destino,
+                'ci' => (int) $row->ci,
+                'of' => (int) $row->of,
+                'total' => (int) $row->total,
+            ])
+            ->values()
+            ->all();
     }
 }

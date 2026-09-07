@@ -50,9 +50,14 @@ class CommunicationController extends Controller
             (int) $request->integer('per_page', 10),
         );
 
+        $request->user()->loadMissing('currentAssignment.position.area');
+
         return Inertia::render('Communications/Index', [
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
             'filters' => $filters,
+            'counters' => $this->communications->countersFor($request->user(), now()->year),
+            'current_area' => $request->user()->currentArea?->name,
+            'year' => now()->year,
             'communications' => Inertia::defer(fn () => CommunicationResource::collection($records)->resolve()),
             'pagination' => Inertia::defer(fn () => [
                 'total' => $records->total(),
@@ -84,6 +89,7 @@ class CommunicationController extends Controller
 
         $communication->load([
             'area',
+            'areaDestino',
             'user.currentAssignment.position.area',
             'position',
             'recipientUser.currentAssignment.position.area',
@@ -105,7 +111,7 @@ class CommunicationController extends Controller
 
         $this->authorize('edit', $communication);
 
-        $communication->load(['area', 'user', 'recipientUser']);
+        $communication->load(['area', 'areaDestino', 'user', 'recipientUser']);
 
         return Inertia::render('Communications/Edit', [
             'communication' => CommunicationResource::make($communication)->resolve(),

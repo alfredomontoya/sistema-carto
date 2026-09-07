@@ -24,13 +24,19 @@ class CommunicationFactory extends Factory
     {
         $area = Area::factory()->create();
         $year = now()->year;
+        $type = fake()->randomElement([Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL]);
+        $destino = $type === Communication::TYPE_INTERNAL || fake()->boolean()
+            ? Area::inRandomOrder()->first()
+            : null;
 
         return [
-            'type' => Communication::TYPE_INTERNAL,
-            'number' => 'ci.'.strtolower($area->code).'.0001/'.$year,
+            'type' => $type,
+            'number' => $type.'.'.strtolower($area->code).'.0001/'.$year,
             'year' => $year,
             'sequence' => 1,
             'area_id' => $area->id,
+            'area_destino_id' => $destino?->id,
+            'area_destino_nombre' => $destino?->name,
             'user_id' => User::factory(),
             'reference' => fake()->sentence(),
             'recipient_name' => fake()->name(),

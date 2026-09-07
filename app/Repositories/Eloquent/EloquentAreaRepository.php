@@ -28,6 +28,20 @@ class EloquentAreaRepository implements AreaRepository
         return Area::where('code', $code)->first();
     }
 
+    public function search(string $term, int $limit = 10): Collection
+    {
+        return Area::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($term) {
+                $query->where('name', 'like', "%{$term}%")
+                    ->orWhere('code', 'like', "%{$term}%");
+            })
+            ->with('parent')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id', 'name', 'code', 'parent_id']);
+    }
+
     public function create(array $data): Area
     {
         return Area::create($data);

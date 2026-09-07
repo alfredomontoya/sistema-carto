@@ -21,12 +21,14 @@ export function RecipientInput({
     onChange,
     onPositionChange,
     disabled,
+    layout = 'stacked',
 }: {
     value: string;
     position: string;
     onChange: (name: string, userId: string | null) => void;
     onPositionChange: (position: string) => void;
     disabled?: boolean;
+    layout?: 'stacked' | 'grid';
 }) {
     const [term, setTerm] = useState(value);
     const [results, setResults] = useState<UserResult[]>([]);
@@ -71,10 +73,12 @@ export function RecipientInput({
     };
 
     return (
-        <div className="space-y-3">
+        <div className={cn(layout === 'grid' ? 'grid gap-4 sm:grid-cols-2' : 'space-y-3')}>
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                    <Label>A quién va dirigida</Label>
+                    <Label>
+                        A quién va dirigida <span className="text-destructive">*</span>
+                    </Label>
                     {selectedUser && <Badge variant="success">Usuario del sistema</Badge>}
                 </div>
                 <div className="relative">
@@ -129,7 +133,9 @@ export function RecipientInput({
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="recipient-position">Puesto del destinatario</Label>
+                <Label htmlFor="recipient-position">
+                    Puesto del destinatario <span className="text-destructive">*</span>
+                </Label>
                 <Input
                     id="recipient-position"
                     className={cn(!position && 'border-dashed')}

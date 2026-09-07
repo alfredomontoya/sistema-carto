@@ -49,6 +49,13 @@ class CommunicationResource extends JsonResource
                     ? (new UserResource($this->recipientUser))->resolve()
                     : null,
             ),
+            'area_destino' => $this->whenLoaded(
+                'areaDestino',
+                fn () => $this->areaDestino !== null
+                    ? (new AreaResource($this->areaDestino))->resolve()
+                    : null,
+            ),
+            'area_destino_nombre' => $this->area_destino_nombre,
             'can_edit' => $request->user()?->id === $this->user_id
                 && $this->status === 'activo',
             'can_annul' => $request->user()?->id === $this->user_id
