@@ -80,6 +80,24 @@ class NumberSequenceService
     }
 
     /**
+     * Current numbering overview for every area in the given year.
+     *
+     * @return array<int, array{area_id: string, area_name: string, area_code: string, ci_current: int, of_current: int, ci_issued_max: int, of_issued_max: int}>
+     */
+    public function overview(int $year, ?string $search = null): array
+    {
+        return $this->counters->overview($year, $search);
+    }
+
+    /**
+     * Set the counter of an area/type/year to an explicit value.
+     */
+    public function setSequence(Area $area, string $type, int $year, int $value): void
+    {
+        $this->counters->setSequence($area->id, $type, $year, $value);
+    }
+
+    /**
      * Reset the counters of every area back to zero.
      */
     public function resetAll(): void

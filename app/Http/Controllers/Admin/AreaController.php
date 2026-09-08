@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\ResetAreaNumberingRequest;
 use App\Http\Requests\Admin\StoreAreaRequest;
 use App\Http\Requests\Admin\UpdateAreaRequest;
 use App\Services\AreaService;
@@ -47,30 +46,6 @@ class AreaController extends Controller
         $this->areas->update($area, $request->validated());
 
         return redirect()->route('admin.areas.index')->with('success', 'Área actualizada correctamente.');
-    }
-
-    public function resetNumbering(ResetAreaNumberingRequest $request, string $id): RedirectResponse
-    {
-        $area = $this->areas->find($id);
-
-        if ($area === null) {
-            abort(404);
-        }
-
-        $force = $request->boolean('force');
-        $types = $request->validated('types');
-
-        $reset = $this->areas->resetNumbering($area, null, $force, $types);
-
-        if (! $reset) {
-            return redirect()->route('admin.areas.index')
-                ->with('error', "No se puede reiniciar la numeración de {$area->name}: el año actual ya tiene números emitidos.");
-        }
-
-        return redirect()->route('admin.areas.index')
-            ->with('success', $force
-                ? "Numeración de {$area->name} reiniciada. Las comunicaciones existentes se conservan."
-                : "Numeración de {$area->name} reiniciada.");
     }
 
     public function destroy(Request $request, string $id): RedirectResponse

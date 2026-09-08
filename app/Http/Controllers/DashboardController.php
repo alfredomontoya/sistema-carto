@@ -34,7 +34,9 @@ class DashboardController extends Controller
         $isAdmin = $request->user()->can('manage areas') || $request->user()->can('manage users') || $request->user()->can('manage settings');
 
         [$period, $from, $to] = $this->resolvePeriod($request);
-        $destinoStats = $this->communications->getDestinoStats($request->user(), $from, $to);
+        $includeAnnulled = $request->boolean('annulled', false);
+        $destinoStats = $this->communications->getDestinoStats($request->user(), $from, $to, $includeAnnulled);
+        $userStats = $this->communications->getUserStats($request->user(), $from, $to, $includeAnnulled);
 
         return Inertia::render('Dashboard', [
             'stats' => $stats,
@@ -42,9 +44,11 @@ class DashboardController extends Controller
             'availableYears' => $availableYears,
             'isAdmin' => $isAdmin,
             'destinoStats' => $destinoStats,
+            'userStats' => $userStats,
             'period' => $period,
             'dateFrom' => $from,
             'dateTo' => $to,
+            'includeAnnulled' => $includeAnnulled,
         ]);
     }
 

@@ -1,15 +1,15 @@
-import { Link } from '@inertiajs/react';
-import { CalendarDays, FileText, Layers, Plus, Users, BarChart2, TrendingUp } from 'lucide-react';
+import { CalendarDays, BarChart2, TrendingUp, Files, Mail, MailOpen } from 'lucide-react';
+import { Head } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
 import { useState } from 'react';
-import { UserAvatar } from '@/components/UserAvatar';
 import { FlashMessages } from '@/components/FlashMessages';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { DestinoBarChart, MonthlyStackedBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
+import { Switch } from '@/components/ui/switch';
+import { ChartDataTable, DestinoBarChart, MonthlyStackedBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
 import type { DestinoStat } from '@/components/charts';
 import AppLayout from '@/layouts/AppLayout';
 import type { UserData } from '@/types';
@@ -37,55 +37,55 @@ export default function Dashboard() {
         availableYears: number[];
         isAdmin: boolean;
         destinoStats: DestinoStat[];
+        userStats: DestinoStat[];
         period: Period;
         dateFrom: string;
         dateTo: string;
+        includeAnnulled: boolean;
     };
     const { auth, stats, selectedYear, availableYears, isAdmin } = props;
-    const { destinoStats, period, dateFrom, dateTo } = props;
+    const { destinoStats, userStats, period, dateFrom, dateTo, includeAnnulled } = props;
     const user = auth.user;
+    const isBasic =
+        !user.can.manage_users && !user.can.manage_areas && !user.can.manage_settings;
     const [from, setFrom] = useState(dateFrom);
     const [to, setTo] = useState(dateTo);
 
-    const quickActions = [
+    const yearCi = stats.reduce((acc, s) => acc + s.ci, 0);
+    const yearOf = stats.reduce((acc, s) => acc + s.of, 0);
+
+    const totals = [
         {
-            label: 'Nueva comunicación',
-            href: '/comunicaciones/crear',
-            icon: Plus,
-            description: 'Generar correlativo interno o externo',
+            label: 'Comunicaciones internas',
+            value: yearCi,
+            icon: Mail,
+            description: `Año ${selectedYear}`,
         },
-        ...(user.can.manage_users
-            ? [
-                  {
-                      label: 'Gestionar usuarios',
-                      href: '/admin/users',
-                      icon: Users,
-                      description: 'Crear usuarios y asignar roles/áreas',
-                  },
-              ]
-            : []),
-        ...(user.can.manage_areas
-            ? [
-                  {
-                      label: 'Administrar áreas',
-                      href: '/admin/areas',
-                      icon: Layers,
-                      description: 'Organizar el árbol de áreas',
-                  },
-              ]
-            : []),
+        {
+            label: 'Oficios externos',
+            value: yearOf,
+            icon: MailOpen,
+            description: `Año ${selectedYear}`,
+        },
+        {
+            label: 'Total documentos',
+            value: yearCi + yearOf,
+            icon: Files,
+            description: `Año ${selectedYear}`,
+        },
     ];
 
     const handleYearChange = (year: number) => {
         router.get(route('dashboard'), { year }, { preserveState: true, preserveScroll: true });
     };
 
-    const applyPeriod = (p: Period, rangeFrom?: string, rangeTo?: string) => {
+    const applyPeriod = (p: Period, rangeFrom?: string, rangeTo?: string, annulled?: boolean) => {
         router.get(
             route('dashboard'),
             {
                 year: selectedYear,
                 period: p,
+                annulled: (annulled ?? includeAnnulled) ? 1 : 0,
                 ...(p === 'rango' ? { from: rangeFrom, to: rangeTo } : {}),
             },
             { preserveState: true, preserveScroll: true },
@@ -101,6 +101,11 @@ export default function Dashboard() {
     };
 
     const hasData = stats.some(s => s.total > 0);
+    const yearTotal = stats.reduce((acc, s) => acc + s.total, 0);
+    const ciTotal = destinoStats.reduce((acc, d) => acc + d.ci, 0);
+    const ofTotal = destinoStats.reduce((acc, d) => acc + d.of, 0);
+    const rangeLabel = `${formatShort(dateFrom)} al ${formatShort(dateTo)}`;
+    const scopeLabel = includeAnnulled ? 'Todas' : 'Activas';
 
     return (
         <AppLayout>
@@ -115,39 +120,42 @@ export default function Dashboard() {
                     </p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {quickActions.map((action) => (
-                        <Link
-                            key={action.href}
-                            href={action.href}
-                            className="group"
-                        >
-                            <Card className="transition-shadow hover:shadow-md">
-                                <CardHeader>
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="flex h-10 w-10 items-center justify-center rounded-lg text-primary-foreground"
-                                            style={{
-                                                background:
-                                                    'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
-                                            }}
-                                        >
-                                            <action.icon className="h-5 w-5" />
-                                        </div>
-                                        <CardTitle className="text-base">
-                                            {action.label}
-                                        </CardTitle>
+                <div className="grid gap-4 md:grid-cols-3">
+                    {totals.map((t) => (
+                        <Card key={t.label}>
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-primary-foreground"
+                                        style={{
+                                            background:
+                                                'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))',
+                                        }}
+                                    >
+                                        <t.icon className="h-5 w-5" />
                                     </div>
-                                    <CardDescription>{action.description}</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        </Link>
+                                    <div>
+                                        <CardTitle className="text-base">{t.label}</CardTitle>
+                                        <CardDescription>{t.description}</CardDescription>
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">
+                                    {t.value}
+                                </p>
+                            </CardHeader>
+                        </Card>
                     ))}
                 </div>
 
+                {!isBasic && (
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">Actividad de comunicaciones</h2>
+                        <h2 className="text-lg font-semibold">
+                            Actividad de comunicaciones{' '}
+                            <span className="text-sm font-normal text-muted-foreground">
+                                {selectedYear} · Total: {yearTotal}
+                            </span>
+                        </h2>
                         <YearSelector value={selectedYear} options={availableYears} onChange={handleYearChange} />
                     </div>
 
@@ -163,7 +171,7 @@ export default function Dashboard() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="grid gap-4 md:grid-cols-2">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-base">
@@ -188,11 +196,11 @@ export default function Dashboard() {
                             </Card>
                         </div>
                     )}
+                </div>
+                )}
 
                     <div className="space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <h2 className="text-lg font-semibold">Por destino</h2>
-                            <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                                 {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
                                     <Button
                                         key={p}
@@ -206,7 +214,15 @@ export default function Dashboard() {
                                         {PERIOD_LABELS[p]}
                                     </Button>
                                 ))}
-                            </div>
+                                <label className="ml-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    <Switch
+                                        checked={includeAnnulled}
+                                        onCheckedChange={(v) =>
+                                            applyPeriod(period, from, to, v === true)
+                                        }
+                                    />
+                                    Incluir anuladas
+                                </label>
                         </div>
 
                         {period === 'rango' && (
@@ -235,8 +251,13 @@ export default function Dashboard() {
                                 </div>
                             </div>
                         )}
+                    </div>
 
-                        <div className="grid gap-4 lg:grid-cols-2">
+                    {!isBasic && (
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-semibold">Por destino</h2>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-base">
@@ -244,7 +265,7 @@ export default function Dashboard() {
                                         Comunicaciones por destino
                                     </CardTitle>
                                     <CardDescription>
-                                        {formatShort(dateFrom)} al {formatShort(dateTo)}
+                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -258,55 +279,166 @@ export default function Dashboard() {
                                         Oficios por destino
                                     </CardTitle>
                                     <CardDescription>
-                                        {formatShort(dateFrom)} al {formatShort(dateTo)}
+                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <DestinoBarChart data={destinoStats} type="of" />
                                 </CardContent>
                             </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
+                                        Total por destino
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <DestinoBarChart data={destinoStats} type="total" />
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: comunicaciones por destino
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={destinoStats} valueKey="ci" labelHeader="Destino" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: oficios por destino
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={destinoStats} valueKey="of" labelHeader="Destino" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: total por destino
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={destinoStats} valueKey="total" labelHeader="Destino" />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                )}
+
+                    <div className="space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-lg font-semibold">Por usuario</h2>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
+                                        Comunicaciones por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <DestinoBarChart data={userStats} type="ci" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                        Oficios por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <DestinoBarChart data={userStats} type="of" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                        Total por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <DestinoBarChart data={userStats} type="total" />
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: comunicaciones por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={userStats} valueKey="ci" labelHeader="Usuario" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: oficios por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={userStats} valueKey="of" labelHeader="Usuario" />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">
+                                        Detalle: total por usuario
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ChartDataTable data={userStats} valueKey="total" labelHeader="Usuario" />
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="h-4 w-4 text-muted-foreground" /> Tu perfil
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                                <UserAvatar user={user} className="h-16 w-16" />
-                                <div className="space-y-1 text-center sm:text-left">
-                                    <p className="font-medium text-foreground">{user.name}</p>
-                                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                                    {user.current_position && (
-                                        <p className="text-sm text-muted-foreground">
-                                            Puesto:{' '}
-                                            <span className="font-medium text-foreground">
-                                                {user.current_position.name}
-                                            </span>
-                                            {user.current_area && (
-                                                <>
-                                                    {' '}· Área:{' '}
-                                                    <span className="font-medium text-foreground">
-                                                        {user.current_area.name}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </p>
-                                    )}
-                                    <p className="text-sm text-muted-foreground">
-                                        Roles:{' '}
-                                        <span className="font-medium capitalize text-foreground">
-                                            {user.roles.join(', ') || 'usuario'}
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
         </AppLayout>
     );

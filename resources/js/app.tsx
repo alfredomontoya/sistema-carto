@@ -9,7 +9,8 @@ import { ThemeProvider } from '@/components/brand/ThemeProvider';
 import { getAppName } from '@/lib/app-name';
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${getAppName()}` : getAppName()),
+    title: (title) =>
+        title ? `${title} - ${getAppName().toUpperCase()}` : getAppName().toUpperCase(),
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,

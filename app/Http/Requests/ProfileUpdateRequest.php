@@ -3,12 +3,25 @@
 namespace App\Http\Requests;
 
 use App\Repositories\Contracts\UserRepository;
+use App\Http\Requests\Concerns\SanitizesInput;
 use App\Services\UserService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProfileUpdateRequest extends FormRequest
 {
+    use SanitizesInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'name' => $this->sanitizeText($this->input('name')),
+            'username' => $this->sanitizeUsername($this->input('username')),
+            'phone' => $this->sanitizePhone($this->input('phone')),
+            'address' => $this->sanitizeText($this->input('address')),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *

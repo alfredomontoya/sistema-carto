@@ -92,42 +92,34 @@ class AreaService
     }
 
     /**
-     * Resets the area numbering for the current year. Refuses if numbers were
-     * already issued this year for the selected types (for the area or for
-     * areas numbering as it), unless the reset is forced.
-     *
-     * A forced reset keeps the existing communications and restarts the
-     * counters at zero, so new correlatives may reuse numbers already issued.
-     *
-     * @param  array<int, string>  $types  communication types to reset (ci/of)
-     *
-     * @return bool true when reset, false when blocked
+     * @return array<int, array{area_id: string, area_name: string, area_code: string, ci_current: int, of_current: int, ci_issued_max: int, of_issued_max: int}>
      */
-    public function resetNumbering(Area $area, ?int $year = null, bool $force = false, array $types = []): bool
+    public function numberingOverview(int $year, ?string $search = null): array
     {
-        $year ??= now()->year;
+        return $this->numbers->overview($year, $search);
+    }
 
-        if ($types === []) {
-            $types = [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL];
-        }
+    /**
+     * Set the numbering of an area/type to an explicit value for the current
+     * year. Refuses when the value is at or below the highest sequence
+     * already issued (it would duplicate correlatives), unless forced.
+     *
+     * @return bool true when set, false when blocked
+     */
+    public function setNumbering(Area $area, string $type, int $value, bool $force = false): bool
+    {
+        $year = now()->year;
 
-        $numberingAreas = Area::query()
-            ->where('numbering_area_id', $area->id)
-            ->orWhere('id', $area->id)
-            ->get();
-
-        $issued = Communication::whereIn('area_id', $numberingAreas->pluck('id'))
+        $issuedMax = (int) Communication::where('area_id', $area->id)
             ->where('year', $year)
-            ->whereIn('type', $types)
-            ->exists();
+            ->where('type', $type)
+            ->max('sequence');
 
-        if ($issued && ! $force) {
+        if ($value <= $issuedMax && ! $force) {
             return false;
         }
 
-        foreach ($numberingAreas as $numberingArea) {
-            $this->numbers->resetForYear($numberingArea, $year, $types);
-        }
+        $this->numbers->setSequence($area, $type, $year, $value);
 
         return true;
     }

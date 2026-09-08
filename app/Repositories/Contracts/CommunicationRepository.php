@@ -41,7 +41,12 @@ interface CommunicationRepository
     /**
      * @return array<int, array{destino: string, ci: int, of: int, total: int}>
      */
-    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null): array;
+    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array;
+
+    /**
+     * @return array<int, array{destino: string, ci: int, of: int, total: int}>
+     */
+    public function getUserStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array;
 
     /**
      * @return array<int, int>

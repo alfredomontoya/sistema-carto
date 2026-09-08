@@ -34,12 +34,41 @@ const PALETTE = [
     '#4d7c0f',
 ];
 
+function ColoredTick({
+    x,
+    y,
+    payload,
+    index,
+}: {
+    x?: number;
+    y?: number;
+    payload?: { value: string };
+    index?: number;
+}) {
+    const value = payload?.value ?? '';
+    const label = value.length > 18 ? `${value.slice(0, 17)}…` : value;
+
+    return (
+        <text
+            x={x}
+            y={y}
+            dy={4}
+            textAnchor="end"
+            fontSize={12}
+            fontWeight={600}
+            fill={PALETTE[(index ?? 0) % PALETTE.length]}
+        >
+            {label}
+        </text>
+    );
+}
+
 export function DestinoBarChart({
     data,
     type,
 }: {
     data: DestinoStat[];
-    type: 'ci' | 'of';
+    type: 'ci' | 'of' | 'total';
 }) {
     if (data.every((d) => d[type] === 0)) {
         return (
@@ -70,11 +99,8 @@ export function DestinoBarChart({
                         dataKey="destino"
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fontSize: 12, fill: '#374151' }}
                         width={120}
-                        tickFormatter={(v: string) =>
-                            v.length > 18 ? `${v.slice(0, 17)}…` : v
-                        }
+                        tick={<ColoredTick />}
                     />
                     <Tooltip
                         contentStyle={{
@@ -85,7 +111,11 @@ export function DestinoBarChart({
                         }}
                         formatter={(value) => [
                             value,
-                            type === 'ci' ? 'Comunicaciones' : 'Oficios',
+                            type === 'ci'
+                                ? 'Comunicaciones'
+                                : type === 'of'
+                                  ? 'Oficios'
+                                  : 'Total',
                         ]}
                         labelFormatter={(label) => label as string}
                     />

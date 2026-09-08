@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\Models\Area;
 use App\Models\AreaNumberCounter;
 use App\Repositories\Contracts\NumberCounterRepository;
 use Illuminate\Support\Facades\DB;
@@ -83,5 +84,52 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
     public function resetAll(): void
     {
         AreaNumberCounter::query()->delete();
+    }
+
+    public function overview(int $year, ?string $search = null): array
+    {
+        $query = Area::query()
+            ->leftJoin('area_number_counters', function ($join) use ($year): void {
+                $join->on('area_number_counters.area_id', '=', 'areas.id')
+                    ->where('area_number_counters.year', '=', $year);
+            })
+            ->groupBy('areas.id', 'areas.name', 'areas.code')
+            ->orderByDesc(DB::raw('MAX(`area_number_counters`.`last_sequence`)'))
+            ->orderBy('areas.name');
+
+        if ($search !== null && trim($search) !== '') {
+            $query->where(function ($query) use ($search): void {
+                $query->where('areas.name', 'like', "%{$search}%")
+                    ->orWhere('areas.code', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->get([
+            'areas.id as area_id',
+            'areas.name as area_name',
+            'areas.code as area_code',
+            DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'ci' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as ci_current"),
+            DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'of' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as of_current"),
+            DB::raw("(SELECT COALESCE(MAX(`sequence`), 0) FROM `communications` WHERE `communications`.`area_id` = `areas`.`id` AND `communications`.`year` = {$year} AND `communications`.`type` = 'ci') as ci_issued_max"),
+            DB::raw("(SELECT COALESCE(MAX(`sequence`), 0) FROM `communications` WHERE `communications`.`area_id` = `areas`.`id` AND `communications`.`year` = {$year} AND `communications`.`type` = 'of') as of_issued_max"),
+        ])
+            ->map(fn ($row) => [
+                'area_id' => (string) $row->area_id,
+                'area_name' => (string) $row->area_name,
+                'area_code' => (string) $row->area_code,
+                'ci_current' => (int) $row->ci_current,
+                'of_current' => (int) $row->of_current,
+                'ci_issued_max' => (int) $row->ci_issued_max,
+                'of_issued_max' => (int) $row->of_issued_max,
+            ])
+            ->all();
+    }
+
+    public function setSequence(string $areaId, string $type, int $year, int $value): void
+    {
+        AreaNumberCounter::updateOrCreate(
+            ['area_id' => $areaId, 'type' => $type, 'year' => $year],
+            ['last_sequence' => $value],
+        );
     }
 }

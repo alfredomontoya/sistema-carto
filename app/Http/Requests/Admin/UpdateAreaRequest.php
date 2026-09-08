@@ -3,11 +3,23 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
+use App\Http\Requests\Concerns\SanitizesInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateAreaRequest extends FormRequest
 {
+    use SanitizesInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'name' => $this->sanitizeText($this->input('name')),
+            'code' => $this->sanitizeCode($this->input('code')),
+            'description' => $this->sanitizeText($this->input('description')),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -21,7 +33,7 @@ class UpdateAreaRequest extends FormRequest
                 'required',
                 'string',
                 'max:50',
-                'regex:/^[a-z0-9._-]+$/',
+                'regex:/^[A-Z0-9._-]+$/',
                 Rule::unique('areas', 'code')->ignore($this->route('area')),
             ],
             'parent_id' => ['nullable', 'uuid', 'exists:areas,id'],

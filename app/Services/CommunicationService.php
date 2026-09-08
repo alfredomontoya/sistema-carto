@@ -171,17 +171,33 @@ class CommunicationService
         });
     }
 
-    public function getDestinoStats(User $user, string $from, string $to): array
+    public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
         $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
         $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
-        $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}";
+        $state = $includeAnnulled ? 'all' : 'active';
+        $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin) {
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $includeAnnulled) {
             $areaId = $isAdmin ? null : $user->currentArea?->id;
             $userId = $isAdmin ? null : $user->id;
 
-            return $this->communications->getDestinoStats($from, $to, $areaId, $userId);
+            return $this->communications->getDestinoStats($from, $to, $areaId, $userId, $includeAnnulled);
+        });
+    }
+
+    public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
+    {
+        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $state = $includeAnnulled ? 'all' : 'active';
+        $cacheKey = "dashboard:usuarios:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
+
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $includeAnnulled) {
+            $areaId = $isAdmin ? null : $user->currentArea?->id;
+            $userId = $isAdmin ? null : $user->id;
+
+            return $this->communications->getUserStats($from, $to, $areaId, $userId, $includeAnnulled);
         });
     }
 

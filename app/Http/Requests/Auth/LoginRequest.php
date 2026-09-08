@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Services\UserService;
+use App\Http\Requests\Concerns\SanitizesInput;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,12 +14,21 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    use SanitizesInput;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'username' => $this->sanitizeUsername($this->input('username')),
+        ]);
     }
 
     /**

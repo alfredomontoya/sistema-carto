@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\NumberingController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
@@ -53,9 +54,12 @@ Route::middleware('auth')->group(function () {
             ->only(['index', 'store', 'update', 'destroy'])
             ->middleware('permission:manage areas');
 
-        Route::post('areas/{area}/reset-numbering', [AreaController::class, 'resetNumbering'])
+        Route::get('numbering', [NumberingController::class, 'index'])
             ->middleware('permission:manage areas')
-            ->name('areas.reset-numbering');
+            ->name('numbering.index');
+        Route::post('numbering/{area}', [NumberingController::class, 'setNumber'])
+            ->middleware('permission:manage areas')
+            ->name('numbering.set');
 
         Route::resource('positions', PositionController::class)
             ->only(['store', 'update', 'destroy'])

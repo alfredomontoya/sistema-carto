@@ -1,4 +1,4 @@
-import { LayoutDashboard, Mail, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
+import { Hash, LayoutDashboard, Mail, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
@@ -38,6 +38,7 @@ export function navigation(permissions: {
     }
     if (permissions.manage_areas) {
         adminItems.push({ label: 'Áreas', href: '/admin/areas', icon: Boxes });
+        adminItems.push({ label: 'Numeración', href: '/admin/numbering', icon: Hash });
     }
     if (permissions.manage_settings) {
         adminItems.push({ label: 'Ajustes', href: '/admin/settings', icon: Palette });

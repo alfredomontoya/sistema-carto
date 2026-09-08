@@ -3,12 +3,25 @@
 namespace App\Http\Requests;
 
 use App\Models\Communication;
+use App\Http\Requests\Concerns\SanitizesInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateCommunicationRequest extends FormRequest
 {
+    use SanitizesInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'reference' => $this->sanitizeText($this->input('reference')),
+            'recipient_name' => $this->sanitizeText($this->input('recipient_name')),
+            'recipient_position' => $this->sanitizeText($this->input('recipient_position')),
+            'area_destino_nombre' => $this->sanitizeText($this->input('area_destino_nombre')),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *

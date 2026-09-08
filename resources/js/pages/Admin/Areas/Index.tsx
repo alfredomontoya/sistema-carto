@@ -1,4 +1,4 @@
-import { Deferred, Head, router, useForm } from '@inertiajs/react';
+import { Deferred, Head, useForm } from '@inertiajs/react';
 import {
     Briefcase,
     ChevronDown,
@@ -6,7 +6,6 @@ import {
     FolderPlus,
     Pencil,
     Plus,
-    RotateCcw,
     Search,
     Trash2,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -61,13 +59,6 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
     const [areaDialogOpen, setAreaDialogOpen] = React.useState(false);
     const [editing, setEditing] = React.useState<AreaNode | null>(null);
     const [deleting, setDeleting] = React.useState<AreaNode | null>(null);
-    const [resettingNumbering, setResettingNumbering] = React.useState<AreaNode | null>(null);
-    const [resetting, setResetting] = React.useState(false);
-    const [forceReset, setForceReset] = React.useState(false);
-    const [resetTypes, setResetTypes] = React.useState<{ ci: boolean; of: boolean }>({
-        ci: true,
-        of: true,
-    });
 
     const [positionDialogOpen, setPositionDialogOpen] = React.useState(false);
     const [editingPosition, setEditingPosition] = React.useState<PositionData | null>(null);
@@ -131,24 +122,6 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
         areaForm.delete(route('admin.areas.destroy', deleting.id), {
             onSuccess: () => setDeleting(null),
         });
-    };
-
-    const selectedResetTypes = (['ci', 'of'] as const).filter((t) => resetTypes[t]);
-
-    const confirmResetNumbering = () => {
-        if (!resettingNumbering) return;
-        setResetting(true);
-        router.post(
-            route('admin.areas.reset-numbering', resettingNumbering.id),
-            { force: forceReset, types: selectedResetTypes },
-            {
-                preserveScroll: true,
-                onFinish: () => {
-                    setResetting(false);
-                    setResettingNumbering(null);
-                },
-            },
-        );
     };
 
     const openCreatePosition = (area: AreaNode) => {
@@ -515,35 +488,6 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                                 onCheckedChange={(v) => areaForm.setData('reset_annually', v)}
                             />
                         </div>
-                        {editing && (
-                            <div className="rounded-md border border-destructive/40 p-3">
-                                <div className="flex items-center gap-2">
-                                    <RotateCcw className="h-4 w-4 text-destructive" />
-                                    <p className="font-medium text-destructive">Reiniciar numeración</p>
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Reinicia el correlativo del año actual a 0001 conservando las
-                                    comunicaciones existentes. Elige los tipos (comunicación interna
-                                    y/o oficio externo) y usa el switch "Reiniciar de todos modos"
-                                    si el año ya emitió números (los nuevos correlativos podrían
-                                    duplicar números ya usados).
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-3 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                        setForceReset(false);
-                                        setResetTypes({ ci: true, of: true });
-                                        setResettingNumbering(editing);
-                                    }}
-                                >
-                                    <RotateCcw className="h-4 w-4" />
-                                    Reiniciar numeración
-                                </Button>
-                            </div>
-                        )}
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setAreaDialogOpen(false)}>
                                 Cancelar
@@ -644,71 +588,6 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                         </Button>
                         <Button variant="destructive" onClick={confirmDeleteArea} disabled={areaForm.processing}>
                             {areaForm.processing ? 'Eliminando…' : 'Eliminar área'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={resettingNumbering !== null} onOpenChange={(o) => !o && setResettingNumbering(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Reiniciar numeración</DialogTitle>
-                        <DialogDescription>
-                            ¿Reiniciar la numeración de <strong>{resettingNumbering?.name}</strong>?
-                            El próximo correlativo del año actual comenzará en 0001.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                            Selecciona los tipos de numeración a reiniciar. Las comunicaciones
-                            existentes se conservan. Si el año actual ya emitió números, reiniciar
-                            hará que los nuevos correlativos reutilicen números ya usados.
-                        </p>
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                    checked={resetTypes.ci}
-                                    onCheckedChange={(v) =>
-                                        setResetTypes((prev) => ({ ...prev, ci: v === true }))
-                                    }
-                                />
-                                Comunicación interna (ci)
-                            </label>
-                            <label className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                    checked={resetTypes.of}
-                                    onCheckedChange={(v) =>
-                                        setResetTypes((prev) => ({ ...prev, of: v === true }))
-                                    }
-                                />
-                                Oficio externo (of)
-                            </label>
-                            {selectedResetTypes.length === 0 && (
-                                <p className="text-sm text-destructive">
-                                    Selecciona al menos un tipo de numeración.
-                                </p>
-                            )}
-                        </div>
-                        <div className="flex items-center justify-between rounded-md border p-3">
-                            <div>
-                                <p className="font-medium">Reiniciar de todos modos</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Permite reiniciar aunque el año actual ya tenga números emitidos.
-                                </p>
-                            </div>
-                            <Switch checked={forceReset} onCheckedChange={setForceReset} />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setResettingNumbering(null)}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmResetNumbering}
-                            disabled={resetting || selectedResetTypes.length === 0}
-                        >
-                            {resetting ? 'Reiniciando…' : 'Reiniciar numeración'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

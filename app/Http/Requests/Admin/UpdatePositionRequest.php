@@ -3,12 +3,23 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Position;
+use App\Http\Requests\Concerns\SanitizesInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdatePositionRequest extends FormRequest
 {
+    use SanitizesInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'name' => $this->sanitizeText($this->input('name')),
+            'code' => $this->sanitizeCode($this->input('code')),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -24,7 +35,7 @@ class UpdatePositionRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:50',
-                'regex:/^[a-z0-9._-]+$/',
+                'regex:/^[A-Z0-9._-]+$/',
                 Rule::unique('positions', 'code')
                     ->ignore($position)
                     ->where(

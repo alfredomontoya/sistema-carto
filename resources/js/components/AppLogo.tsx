@@ -21,7 +21,7 @@ export function AppLogo({
                     className={cn('h-9 w-9 rounded-lg object-contain', iconOnly && 'mx-auto')}
                 />
                 {!iconOnly && (
-                    <span className="truncate text-base font-semibold text-foreground">
+                    <span className="truncate text-base font-semibold uppercase text-foreground">
                         {brand.app_name}
                     </span>
                 )}
@@ -45,7 +45,7 @@ export function AppLogo({
                 className={cn('h-9 w-9 shrink-0 rounded-lg object-contain', iconOnly && 'mx-auto')}
             />
             {!iconOnly && (
-                <span className="truncate text-base font-semibold text-foreground">
+                <span className="truncate text-base font-semibold uppercase text-foreground">
                     {brand.app_name}
                 </span>
             )}
