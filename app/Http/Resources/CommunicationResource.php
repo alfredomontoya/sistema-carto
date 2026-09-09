@@ -7,6 +7,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class CommunicationResource extends JsonResource
 {
+    public function __construct(
+        $resource,
+        private readonly bool $isAdmin = false,
+    ) {
+        parent::__construct($resource);
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -42,11 +49,11 @@ class CommunicationResource extends JsonResource
                     ]
                     : null,
             ),
-            'user' => $this->whenLoaded('user', fn () => (new UserResource($this->user))->resolve()),
+            'user' => $this->whenLoaded('user', fn () => (new UserResource($this->user, $this->isAdmin))->resolve()),
             'recipient_user' => $this->whenLoaded(
                 'recipientUser',
                 fn () => $this->recipientUser !== null
-                    ? (new UserResource($this->recipientUser))->resolve()
+                    ? (new UserResource($this->recipientUser, $this->isAdmin))->resolve()
                     : null,
             ),
             'area_destino' => $this->whenLoaded(
@@ -56,10 +63,9 @@ class CommunicationResource extends JsonResource
                     : null,
             ),
             'area_destino_nombre' => $this->area_destino_nombre,
-            'can_edit' => $request->user()?->id === $this->user_id
-                && $this->status === 'activo',
-            'can_annul' => $request->user()?->id === $this->user_id
-                && $this->status === 'activo',
+            'can_edit' => $this->status === 'activo'
+                && ($request->user()?->id === $this->user_id || $this->isAdmin),
+            'can_annul' => $this->status === 'activo' && $this->isAdmin,
         ];
     }
 }

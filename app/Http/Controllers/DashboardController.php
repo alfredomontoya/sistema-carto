@@ -18,6 +18,8 @@ class DashboardController extends Controller
 
     public const PERIOD_MONTH = 'mes';
 
+    public const PERIOD_YEAR = 'año';
+
     public const PERIOD_RANGE = 'rango';
 
     public function __construct(
@@ -33,55 +35,64 @@ class DashboardController extends Controller
         $availableYears = $this->communications->getAvailableYears($request->user());
         $isAdmin = $request->user()->can('manage areas') || $request->user()->can('manage users') || $request->user()->can('manage settings');
 
-        [$period, $from, $to] = $this->resolvePeriod($request);
+        [$period, $from, $to, $periodYear] = $this->resolvePeriod($request);
         $includeAnnulled = $request->boolean('annulled', false);
-        $destinoStats = $this->communications->getDestinoStats($request->user(), $from, $to, $includeAnnulled);
-        $userStats = $this->communications->getUserStats($request->user(), $from, $to, $includeAnnulled);
 
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'selectedYear' => $year,
             'availableYears' => $availableYears,
             'isAdmin' => $isAdmin,
-            'destinoStats' => $destinoStats,
-            'userStats' => $userStats,
+            'destinoStats' => Inertia::defer(fn () => $this->communications->getDestinoStats($request->user(), $from, $to, $includeAnnulled)),
+            'userStats' => Inertia::defer(fn () => $this->communications->getUserStats($request->user(), $from, $to, $includeAnnulled)),
             'period' => $period,
             'dateFrom' => $from,
             'dateTo' => $to,
+            'periodYear' => $periodYear,
             'includeAnnulled' => $includeAnnulled,
         ]);
     }
 
     /**
-     * @return array{string, string, string}
+     * @return array{string, string, string, int}
      */
     private function resolvePeriod(Request $request): array
     {
         $period = $request->string('period', self::PERIOD_TODAY)->toString();
 
-        if (! in_array($period, [self::PERIOD_TODAY, self::PERIOD_YESTERDAY, self::PERIOD_WEEK, self::PERIOD_MONTH, self::PERIOD_RANGE], true)) {
+        if (! in_array($period, [self::PERIOD_TODAY, self::PERIOD_YESTERDAY, self::PERIOD_WEEK, self::PERIOD_MONTH, self::PERIOD_YEAR, self::PERIOD_RANGE], true)) {
             $period = self::PERIOD_TODAY;
         }
 
         $today = Carbon::today();
+        $periodYear = (int) $request->integer('period_year', $today->year);
+        $periodYear = max(2020, min($periodYear, $today->year + 1));
+
+        $ref = $periodYear === $today->year
+            ? $today->copy()
+            : Carbon::create($periodYear, $today->month, min($today->day, Carbon::create($periodYear, $today->month, 1)->daysInMonth));
 
         $range = match ($period) {
-            self::PERIOD_YESTERDAY => [$today->copy()->subDay(), $today->copy()->subDay()],
-            self::PERIOD_WEEK => [$today->copy()->startOfWeek(Carbon::MONDAY), $today->copy()->endOfWeek(Carbon::SUNDAY)],
-            self::PERIOD_MONTH => [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()],
+            self::PERIOD_YESTERDAY => [$ref->copy()->subDay(), $ref->copy()->subDay()],
+            self::PERIOD_WEEK => [$ref->copy()->startOfWeek(Carbon::MONDAY), $ref->copy()->endOfWeek(Carbon::SUNDAY)],
+            self::PERIOD_MONTH => [$ref->copy()->startOfMonth(), $ref->copy()->endOfMonth()],
+            self::PERIOD_YEAR => [
+                $ref->copy()->startOfYear(),
+                $periodYear === $today->year ? $today->copy() : $ref->copy()->endOfYear(),
+            ],
             self::PERIOD_RANGE => [$this->parseDate($request->query('from')), $this->parseDate($request->query('to'))],
-            default => [$today->copy(), $today->copy()],
+            default => [$ref->copy(), $ref->copy()],
         };
 
         [$from, $to] = $range;
-        $from ??= $today->copy();
-        $to ??= $today->copy();
+        $from ??= $ref->copy();
+        $to ??= $ref->copy();
 
         if ($from->greaterThan($to)) {
             [$from, $to] = [$to, $from];
         }
 
-        return [$period, $from->toDateString(), $to->toDateString()];
+        return [$period, $from->toDateString(), $to->toDateString(), $periodYear];
     }
 
     private function parseDate(mixed $value): ?Carbon

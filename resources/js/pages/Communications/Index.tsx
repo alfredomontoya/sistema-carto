@@ -1,10 +1,11 @@
-import { Deferred, Head, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Download, FileText, Pencil, Plus, Search, ShieldX } from 'lucide-react';
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
 import { CommunicationCreateDialog } from '@/components/communications/CommunicationCreateDialog';
+import { CommunicationEditDialog } from '@/components/communications/CommunicationEditDialog';
 import { CommunicationShowDialog } from '@/components/communications/CommunicationShowDialog';
 import { CopyNumberButton } from '@/components/communications/CopyNumberButton';
 import {
@@ -33,7 +34,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { DataTablePagination } from '@/components/DataTablePagination';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/dates';
 import AppLayout from '@/layouts/AppLayout';
 import type { AreaData, CommunicationData, CountersData, PaginationData } from '@/types';
@@ -78,6 +78,8 @@ export default function CommunicationsIndex({
     const [fromCreate, setFromCreate] = useState<CommunicationData | null>(null);
     const [selected, setSelected] = useState<CommunicationData | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
+    const [editTarget, setEditTarget] = useState<CommunicationData | null>(null);
+    const firstRender = useRef(true);
 
     const showTarget = fromCreate ?? selected;
     const dialogOpen = showTarget !== null;
@@ -111,11 +113,16 @@ export default function CommunicationsIndex({
     };
 
     useEffect(() => {
+        if (firstRender.current) return;
         const timeout = setTimeout(() => applyFilters(), 350);
         return () => clearTimeout(timeout);
     }, [search]);
 
     useEffect(() => {
+        if (firstRender.current) {
+            firstRender.current = false;
+            return;
+        }
         applyFilters();
     }, [type, status, areaId, dateFrom, dateTo]);
 
@@ -241,65 +248,37 @@ export default function CommunicationsIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <Deferred
-                            data="communications"
-                            fallback={
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Número</TableHead>
-                                            <TableHead>Tipo</TableHead>
-                                            <TableHead>Remitente</TableHead>
-                                            <TableHead>Destinatario</TableHead>
-                                            <TableHead>Área</TableHead>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead className="text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {Array.from({ length: 6 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell colSpan={8}>
-                                                    <Skeleton className="h-6 w-full" />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            }
-                        >
-                            <Table>
-                                <TableHeader>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Número</TableHead>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead>Remitente</TableHead>
+                                    <TableHead>Destinatario</TableHead>
+                                    <TableHead>Área</TableHead>
+                                    <TableHead>Fecha</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {communications?.length === 0 && (
                                     <TableRow>
-                                        <TableHead>Número</TableHead>
-                                        <TableHead>Tipo</TableHead>
-                                        <TableHead>Remitente</TableHead>
-                                        <TableHead>Destinatario</TableHead>
-                                        <TableHead>Área</TableHead>
-                                        <TableHead>Fecha</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
+                                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                            No hay registros con los filtros actuales.
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {communications?.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                                                No hay registros con los filtros actuales.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                    {communications?.map((c) => (
+                                )}
+                                {communications?.map((c) => (
                                                 <TableRow key={c.id} className={c.status === 'anulado' ? 'opacity-60' : ''}>
                                                     <TableCell>
                                                         <div className="flex items-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSelected(c)}
-                                                                title="Ver detalle"
-                                                                className="font-mono text-sm font-medium text-primary hover:underline"
-                                                            >
+                                                             <button
+                                                                 type="button"
+                                                                 onClick={() => setSelected(c)}
+                                                                 title="Ver detalle"
+                                                                 className="font-mono text-sm font-medium uppercase text-primary hover:underline"
+                                                             >
                                                                 {c.number}
                                                             </button>
                                                             <CopyNumberButton value={c.number} />
@@ -348,22 +327,28 @@ export default function CommunicationsIndex({
                                                                 </Button>
                                                             )}
                                                             {c.can_edit && (
-                                                                <>
-                                                                    <Button variant="outline" size="sm" asChild>
-                                                                        <a href={`/comunicaciones/${c.id}/editar`}>
-                                                                            <Pencil /> Editar
-                                                                        </a>
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="destructive"
-                                                                        size="sm"
-                                                                        onClick={() => setAnnulTarget(c)}
-                                                                    >
-                                                                        <ShieldX /> Anular
-                                                                    </Button>
-                                                                </>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    onClick={() => setEditTarget(c)}
+                                                                    title="Editar"
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </Button>
                                                             )}
-                                                            {!c.can_edit && !c.file_name && (
+                                                            {c.can_annul && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                    onClick={() => setAnnulTarget(c)}
+                                                                    title="Anular"
+                                                                >
+                                                                    <ShieldX className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            {!c.can_edit && !c.can_annul && !c.file_name && (
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
                                                                     <FileText className="h-4 w-4 text-muted-foreground" />
                                                                 </Button>
@@ -374,12 +359,9 @@ export default function CommunicationsIndex({
                                             ))}
                                         </TableBody>
                                     </Table>
-                        </Deferred>
                     </div>
 
-                    <Deferred data="pagination" fallback={null}>
-                        <DataTablePagination pagination={pagination!} filters={filters} />
-                    </Deferred>
+                    <DataTablePagination pagination={pagination!} filters={filters} />
                 </Card>
             </div>
 
@@ -389,7 +371,7 @@ export default function CommunicationsIndex({
                         <DialogTitle>Anular registro</DialogTitle>
                         <DialogDescription>
                             ¿Confirmas la anulación de{' '}
-                            <strong className="font-mono">{annulTarget?.number}</strong>? El registro
+                            <strong className="font-mono uppercase">{annulTarget?.number}</strong>? El registro
                             quedará oculto del listado por defecto, pero seguirá consultable. El número
                             correlativo no se reutiliza.
                         </DialogDescription>
@@ -409,6 +391,10 @@ export default function CommunicationsIndex({
                 communication={showTarget}
                 open={dialogOpen}
                 onOpenChange={(o) => !o && closeDialog()}
+                onEdit={() => {
+                    if (showTarget) setEditTarget(showTarget);
+                    closeDialog();
+                }}
             />
 
             <CommunicationCreateDialog
@@ -417,6 +403,12 @@ export default function CommunicationsIndex({
                 counters={counters}
                 current_area={current_area}
                 year={year}
+            />
+
+            <CommunicationEditDialog
+                communication={editTarget}
+                open={editTarget !== null}
+                onOpenChange={(o) => !o && setEditTarget(null)}
             />
         </AppLayout>
     );

@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Communication;
 use App\Repositories\Contracts\CommunicationRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class EloquentCommunicationRepository implements CommunicationRepository
@@ -60,6 +61,9 @@ class EloquentCommunicationRepository implements CommunicationRepository
      */
     public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array
     {
+        $start = Carbon::create($year, 1, 1)->startOfDay();
+        $end = Carbon::create($year, 12, 31)->endOfDay();
+
         $query = Communication::query()
             ->selectRaw('
                 MONTH(`created_at`) as `month`,
@@ -67,7 +71,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
                 SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `of`,
                 COUNT(*) as `total`
             ', [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereYear('created_at', $year)
+            ->whereBetween('created_at', [$start, $end])
             ->where('status', Communication::STATUS_ACTIVE);
 
         if ($areaId) $query->where('area_id', $areaId);
@@ -93,7 +97,8 @@ class EloquentCommunicationRepository implements CommunicationRepository
     public function getAvailableYears(?string $areaId = null, ?string $userId = null): array
     {
         $query = Communication::query()
-            ->selectRaw('DISTINCT YEAR(`created_at`) as `year`')
+            ->select('year')
+            ->distinct()
             ->where('status', Communication::STATUS_ACTIVE)
             ->orderByDesc('year');
 
@@ -116,8 +121,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
                 SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `of`,
                 COUNT(*) as `total`
             ", [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereDate('communications.created_at', '>=', $from)
-            ->whereDate('communications.created_at', '<=', $to);
+            ->whereBetween('communications.created_at', [$from, $to]);
 
         if (! $includeAnnulled) {
             $query->where('communications.status', Communication::STATUS_ACTIVE);
@@ -153,8 +157,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
                 SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `of`,
                 COUNT(*) as `total`
             ", [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereDate('communications.created_at', '>=', $from)
-            ->whereDate('communications.created_at', '<=', $to);
+            ->whereBetween('communications.created_at', [$from, $to]);
 
         if (! $includeAnnulled) {
             $query->where('communications.status', Communication::STATUS_ACTIVE);

@@ -8,11 +8,23 @@ use App\Models\User;
 class CommunicationPolicy
 {
     /**
-     * Only the author can edit or annul an active record.
+     * The author or an administrator can edit an active record.
      */
     public function edit(User $user, Communication $communication): bool
     {
-        return $user->id === $communication->user_id
-            && $communication->status === Communication::STATUS_ACTIVE;
+        if ($communication->status !== Communication::STATUS_ACTIVE) {
+            return false;
+        }
+
+        return $user->id === $communication->user_id || $user->hasRole('administrador');
+    }
+
+    /**
+     * Only an administrator can annul an active record.
+     */
+    public function annul(User $user, Communication $communication): bool
+    {
+        return $communication->status === Communication::STATUS_ACTIVE
+            && $user->hasRole('administrador');
     }
 }

@@ -93,6 +93,11 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
                 $join->on('area_number_counters.area_id', '=', 'areas.id')
                     ->where('area_number_counters.year', '=', $year);
             })
+            ->leftJoin('communications', function ($join) use ($year): void {
+                $join->on('communications.area_id', '=', 'areas.id')
+                    ->where('communications.year', '=', $year)
+                    ->where('communications.status', '=', 'activo');
+            })
             ->groupBy('areas.id', 'areas.name', 'areas.code')
             ->orderByDesc(DB::raw('MAX(`area_number_counters`.`last_sequence`)'))
             ->orderBy('areas.name');
@@ -110,8 +115,8 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
             'areas.code as area_code',
             DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'ci' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as ci_current"),
             DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'of' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as of_current"),
-            DB::raw("(SELECT COALESCE(MAX(`sequence`), 0) FROM `communications` WHERE `communications`.`area_id` = `areas`.`id` AND `communications`.`year` = {$year} AND `communications`.`type` = 'ci') as ci_issued_max"),
-            DB::raw("(SELECT COALESCE(MAX(`sequence`), 0) FROM `communications` WHERE `communications`.`area_id` = `areas`.`id` AND `communications`.`year` = {$year} AND `communications`.`type` = 'of') as of_issued_max"),
+            DB::raw("MAX(CASE WHEN `communications`.`type` = 'ci' THEN `communications`.`sequence` ELSE 0 END) as ci_issued_max"),
+            DB::raw("MAX(CASE WHEN `communications`.`type` = 'of' THEN `communications`.`sequence` ELSE 0 END) as of_issued_max"),
         ])
             ->map(fn ($row) => [
                 'area_id' => (string) $row->area_id,

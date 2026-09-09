@@ -6,6 +6,7 @@ use App\Http\Resources\UserResource;
 use App\Services\BrandSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Inertia\Inertia;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -33,8 +34,22 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        $isAdmin = false;
+        $currentArea = null;
+        $currentPosition = null;
+
         if ($user !== null) {
-            $user->load(['roles', 'currentAssignment.position.area']);
+            $isLookup = $request->routeIs('users.search') || $request->routeIs('areas.search');
+
+            if (! $isLookup) {
+                $user->load(['roles', 'currentAssignment.position.area']);
+                $currentArea = $user->currentArea;
+                $currentPosition = $user->currentAssignment?->position;
+            } else {
+                $user->load('roles');
+            }
+
+            $isAdmin = $user->can('manage users') || $user->can('manage areas') || $user->can('manage settings');
         }
 
         /** @var BrandSettingsService $brand */
@@ -47,12 +62,13 @@ class HandleInertiaRequests extends Middleware
                 'user_domain' => (string) config('auth.user_domain'),
             ],
             'auth' => [
-                'user' => $user ? UserResource::make($user)->resolve() : null,
+                'user' => $user ? UserResource::make($user, $isAdmin)->resolve() : null,
             ],
-            'brand' => $brand->withUrls(),
+            'brand' => Inertia::lazy(fn () => $brand->withUrls()),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
+                'celebrate' => $request->session()->get('celebrate'),
             ],
             'created' => $request->session()->get('created'),
         ];

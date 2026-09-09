@@ -24,6 +24,8 @@ return new class extends Migration
             $table->string('recipient_name');
             $table->string('recipient_position')->nullable();
             $table->foreignUuid('recipient_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('area_destino_id')->nullable()->constrained('areas')->nullOnDelete();
+            $table->string('area_destino_nombre')->nullable();
             $table->string('status', 20)->default('activo');
             $table->string('file_path')->nullable();
             $table->string('file_name')->nullable();
@@ -32,6 +34,7 @@ return new class extends Migration
             $table->index(['area_id', 'year', 'type']);
             $table->index(['user_id']);
             $table->index(['position_id']);
+            $table->index(['area_destino_id']);
             $table->index(['recipient_name']);
             $table->index(['status']);
             $table->index(['created_at']);

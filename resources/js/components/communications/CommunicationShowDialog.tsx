@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Pencil } from 'lucide-react';
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,12 @@ export function CommunicationShowDialog({
     communication,
     open,
     onOpenChange,
+    onEdit,
 }: {
     communication: CommunicationData | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onEdit?: () => void;
 }) {
     const c = communication;
 
@@ -62,7 +64,7 @@ export function CommunicationShowDialog({
                         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">Número correlativo</p>
-                                <p className="font-mono text-lg font-semibold text-foreground">{c.number}</p>
+                                <p className="font-mono text-lg font-semibold uppercase text-foreground">{c.number}</p>
                             </div>
                             <CopyNumberButton value={c.number} />
                         </div>
@@ -106,6 +108,11 @@ export function CommunicationShowDialog({
                 )}
 
                 <DialogFooter>
+                    {c?.can_edit && onEdit && (
+                        <Button variant="outline" onClick={onEdit}>
+                            <Pencil className="h-4 w-4" /> Editar
+                        </Button>
+                    )}
                     <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
                 </DialogFooter>
             </DialogContent>

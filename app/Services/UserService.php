@@ -103,7 +103,7 @@ class UserService
         }
 
         DB::transaction(function () use ($user, $position): void {
-            $current = $user->currentAssignment()->first();
+            $current = $user->currentAssignment()->lockForUpdate()->first();
             if ($current !== null) {
                 if ($current->position_id === $position->id) {
                     return;

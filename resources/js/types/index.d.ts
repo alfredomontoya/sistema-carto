@@ -134,6 +134,7 @@ export interface CountersData {
 export interface FlashData {
     success?: string | null;
     error?: string | null;
+    celebrate?: number | null;
 }
 
 declare module '@inertiajs/core' {

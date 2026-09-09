@@ -58,7 +58,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
   - **Área destino**: opcional, con doble modalidad — selección de un área registrada (autocomplete `/areas/buscar`, top 10, navegable con ↑/↓/Enter/click, limpiable a nulo) o nombre en texto libre. Se guarda `area_destino_id` (FK nullable) + `area_destino_nombre`. **Obligatoria (el nombre) cuando es `ci`**; opcional en `of`.
   - **Adjunto**: opcional, PDF, Word o imagen.
 - **Estado**: `activo` o `anulado`. **Anular no libera el número**.
-- **Solo el creador puede editar** una comunicación mientras esté activa (`CommunicationPolicy::update`).
+- **Solo el creador o un administrador puede editar/anular** una comunicación mientras esté activa (`CommunicationPolicy::edit`).
 - La anulación deja la comunicación consultable (histórico) pero oculta del listado por defecto.
 - Búsqueda por remitente, destinatario, número, y rango de fechas; filtros por tipo, estado y área.
 

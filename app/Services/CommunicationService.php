@@ -117,25 +117,27 @@ class CommunicationService
      */
     public function update(Communication $communication, array $data, ?UploadedFile $file = null): Communication
     {
-        $payload = [
-            'reference' => $data['reference'],
-            'recipient_name' => $data['recipient_name'],
-            'recipient_position' => $data['recipient_position'] ?? null,
-            'recipient_user_id' => $data['recipient_user_id'] ?? null,
-            'area_destino_id' => $data['area_destino_id'] ?? null,
-            'area_destino_nombre' => $data['area_destino_nombre'] ?? null,
-        ];
+        return DB::transaction(function () use ($communication, $data, $file): Communication {
+            $payload = [
+                'reference' => $data['reference'],
+                'recipient_name' => $data['recipient_name'],
+                'recipient_position' => $data['recipient_position'] ?? null,
+                'recipient_user_id' => $data['recipient_user_id'] ?? null,
+                'area_destino_id' => $data['area_destino_id'] ?? null,
+                'area_destino_nombre' => $data['area_destino_nombre'] ?? null,
+            ];
 
-        if ($file !== null) {
-            $this->deleteFile($communication);
-            $this->storeFile($file, $payload);
-        } elseif (($data['remove_file'] ?? false) === true) {
-            $this->deleteFile($communication);
-            $payload['file_path'] = null;
-            $payload['file_name'] = null;
-        }
+            if ($file !== null) {
+                $this->deleteFile($communication);
+                $this->storeFile($file, $payload);
+            } elseif (($data['remove_file'] ?? false) === true) {
+                $this->deleteFile($communication);
+                $payload['file_path'] = null;
+                $payload['file_name'] = null;
+            }
 
-        return $this->communications->update($communication, $payload);
+            return $this->communications->update($communication, $payload);
+        });
     }
 
     public function annul(Communication $communication): Communication
@@ -234,6 +236,41 @@ class CommunicationService
         }
 
         Cache::increment(self::STATS_CACHE_VERSION_KEY);
+    }
+
+    /**
+     * Yesterday's created communications ranking for the user.
+     *
+     * @return array{count: int, max: int, is_top: bool}
+     */
+    public function yesterdayCreatorStats(User $user): array
+    {
+        $yesterday = now()->subDay()->toDateString();
+
+        $max = (int) Communication::whereDate('created_at', $yesterday)
+            ->groupBy('user_id')
+            ->selectRaw('COUNT(*) as total')
+            ->orderByDesc('total')
+            ->limit(1)
+            ->value('total');
+
+        $mine = Communication::where('user_id', $user->id)
+            ->whereDate('created_at', $yesterday)
+            ->count();
+
+        return [
+            'count' => $mine,
+            'max' => $max,
+            'is_top' => $max > 0 && $mine >= $max,
+        ];
+    }
+
+    /**
+     * Whether the user tied or led yesterday's created communications ranking.
+     */
+    public function wasTopCreatorYesterday(User $user): bool
+    {
+        return $this->yesterdayCreatorStats($user)['is_top'];
     }
 
     public function find(string $id): ?Communication

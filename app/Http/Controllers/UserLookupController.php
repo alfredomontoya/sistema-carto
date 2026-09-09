@@ -16,11 +16,13 @@ class UserLookupController extends Controller
     {
         $term = trim((string) $request->query('term', ''));
 
-        if ($term === '') {
+        if ($term === '' || strlen($term) < 3) {
             return response()->json([]);
         }
 
-        $users = $this->users->search($term, (int) $request->integer('limit', 10));
+        $limit = min((int) $request->integer('limit', 10), 20);
+
+        $users = $this->users->search($term, $limit);
 
         return response()->json(
             $users->map(

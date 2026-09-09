@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\Communication;
 use App\Repositories\Contracts\AreaRepository;
+use Illuminate\Support\Facades\DB;
 
 class AreaService
 {
@@ -110,17 +111,20 @@ class AreaService
     {
         $year = now()->year;
 
-        $issuedMax = (int) Communication::where('area_id', $area->id)
-            ->where('year', $year)
-            ->where('type', $type)
-            ->max('sequence');
+        return DB::transaction(function () use ($area, $type, $value, $year, $force): bool {
+            $issuedMax = (int) Communication::where('area_id', $area->id)
+                ->where('year', $year)
+                ->where('type', $type)
+                ->lockForUpdate()
+                ->max('sequence');
 
-        if ($value <= $issuedMax && ! $force) {
-            return false;
-        }
+            if ($value <= $issuedMax && ! $force) {
+                return false;
+            }
 
-        $this->numbers->setSequence($area, $type, $year, $value);
+            $this->numbers->setSequence($area, $type, $year, $value);
 
-        return true;
+            return true;
+        });
     }
 }

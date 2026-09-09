@@ -38,8 +38,16 @@ class EloquentSettingsRepository implements SettingsRepository
 
     public function setMany(array $values): void
     {
+        $encoded = [];
         foreach ($values as $key => $value) {
-            $this->set($key, $value);
+            $encoded[] = [
+                'key' => $key,
+                'value' => is_array($value) || is_bool($value) ? json_encode($value) : (string) $value,
+            ];
+        }
+
+        if ($encoded !== []) {
+            Setting::upsert($encoded, ['key'], ['value']);
         }
     }
 }

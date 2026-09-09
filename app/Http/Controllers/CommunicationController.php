@@ -45,12 +45,15 @@ class CommunicationController extends Controller
             $filters['area_id'] = $request->user()->currentArea?->id ?? 'all';
         }
 
+        $perPage = min((int) $request->integer('per_page', 10), 50);
+
         $records = $this->communications->paginate(
             $filters,
-            (int) $request->integer('per_page', 10),
+            $perPage,
         );
 
         $request->user()->loadMissing('currentAssignment.position.area');
+        $isAdmin = $request->user()->can('manage users') || $request->user()->can('manage areas') || $request->user()->can('manage settings');
 
         return Inertia::render('Communications/Index', [
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
@@ -58,13 +61,13 @@ class CommunicationController extends Controller
             'counters' => $this->communications->countersFor($request->user(), now()->year),
             'current_area' => $request->user()->currentArea?->name,
             'year' => now()->year,
-            'communications' => Inertia::defer(fn () => CommunicationResource::collection($records)->resolve()),
-            'pagination' => Inertia::defer(fn () => [
+            'communications' => CommunicationResource::collection($records, $isAdmin)->resolve(),
+            'pagination' => [
                 'total' => $records->total(),
                 'per_page' => $records->perPage(),
                 'current_page' => $records->currentPage(),
                 'last_page' => $records->lastPage(),
-            ]),
+            ],
         ]);
     }
 
@@ -95,27 +98,12 @@ class CommunicationController extends Controller
             'recipientUser.currentAssignment.position.area',
         ]);
 
+        $isAdmin = $request->user()->can('manage users') || $request->user()->can('manage areas') || $request->user()->can('manage settings');
+
         return redirect()
             ->route('communications.index')
             ->with('success', "Comunicación {$communication->number} registrada correctamente.")
-            ->with('created', CommunicationResource::make($communication)->resolve());
-    }
-
-    public function edit(Request $request, string $id): Response
-    {
-        $communication = $this->communications->find($id);
-
-        if ($communication === null) {
-            abort(404);
-        }
-
-        $this->authorize('edit', $communication);
-
-        $communication->load(['area', 'areaDestino', 'user', 'recipientUser']);
-
-        return Inertia::render('Communications/Edit', [
-            'communication' => CommunicationResource::make($communication)->resolve(),
-        ]);
+            ->with('created', CommunicationResource::make($communication, $isAdmin)->resolve());
     }
 
     public function update(UpdateCommunicationRequest $request, string $id): RedirectResponse
@@ -147,7 +135,7 @@ class CommunicationController extends Controller
             abort(404);
         }
 
-        $this->authorize('edit', $communication);
+        $this->authorize('annul', $communication);
 
         if ($communication->status !== Communication::STATUS_ACTIVE) {
             return redirect()->route('communications.index')->with('error', 'El registro ya no está activo.');

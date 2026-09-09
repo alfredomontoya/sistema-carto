@@ -1,7 +1,5 @@
 'use client';
 
-import { router } from '@inertiajs/react';
-import { route } from 'ziggy-js';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -31,7 +29,6 @@ export function YearSelector({ value, options, onChange }: YearSelectorProps) {
 
   const handleSelect = (year: number) => {
     setIsOpen(false);
-    router.get(route('dashboard'), { year }, { preserveState: true, preserveScroll: true });
     onChange?.(year);
   };
 

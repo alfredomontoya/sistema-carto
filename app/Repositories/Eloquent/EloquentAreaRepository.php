@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Area;
 use App\Repositories\Contracts\AreaRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class EloquentAreaRepository implements AreaRepository
 {
@@ -71,12 +72,20 @@ class EloquentAreaRepository implements AreaRepository
 
     private function collectDescendants(Area $area): Collection
     {
+        $allAreas = Area::query()->get(['id', 'parent_id']);
+
+        $childrenMap = $allAreas->groupBy('parent_id');
+
         $descendants = new Collection;
-        $stack = $area->children()->get();
+        $stack = $childrenMap->get($area->id, new Collection);
 
         while ($stack->isNotEmpty()) {
             $descendants = $descendants->merge($stack);
-            $stack = $stack->flatMap(fn (Area $child) => $child->children()->get());
+            $nextStack = new Collection;
+            foreach ($stack as $child) {
+                $nextStack = $nextStack->merge($childrenMap->get($child->id, new Collection));
+            }
+            $stack = $nextStack;
         }
 
         return $descendants;

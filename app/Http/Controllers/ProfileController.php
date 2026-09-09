@@ -110,10 +110,15 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $this->users->delete($user);
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        $deleted = $this->users->delete($user);
+
+        if (! $deleted) {
+            return Redirect::route('profile.edit')
+                ->with('error', 'No se puede eliminar la cuenta: tiene comunicaciones registradas.');
+        }
 
         return Redirect::to('/');
     }

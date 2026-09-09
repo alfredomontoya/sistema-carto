@@ -25,12 +25,12 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(UserRepository::class, EloquentUserRepository::class);
-        $this->app->bind(AreaRepository::class, EloquentAreaRepository::class);
-        $this->app->bind(CommunicationRepository::class, EloquentCommunicationRepository::class);
-        $this->app->bind(NumberCounterRepository::class, EloquentNumberCounterRepository::class);
-        $this->app->bind(PositionRepository::class, EloquentPositionRepository::class);
-        $this->app->bind(SettingsRepository::class, EloquentSettingsRepository::class);
-        $this->app->bind(RoleRepository::class, EloquentRoleRepository::class);
+        $this->app->singleton(UserRepository::class, EloquentUserRepository::class);
+        $this->app->singleton(AreaRepository::class, EloquentAreaRepository::class);
+        $this->app->singleton(CommunicationRepository::class, EloquentCommunicationRepository::class);
+        $this->app->singleton(NumberCounterRepository::class, EloquentNumberCounterRepository::class);
+        $this->app->singleton(PositionRepository::class, EloquentPositionRepository::class);
+        $this->app->singleton(SettingsRepository::class, EloquentSettingsRepository::class);
+        $this->app->singleton(RoleRepository::class, EloquentRoleRepository::class);
     }
 }

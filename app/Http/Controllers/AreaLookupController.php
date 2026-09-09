@@ -16,11 +16,13 @@ class AreaLookupController extends Controller
     {
         $term = trim((string) $request->query('term', ''));
 
-        if ($term === '') {
+        if ($term === '' || strlen($term) < 3) {
             return response()->json([]);
         }
 
-        $areas = $this->areas->search($term, (int) $request->integer('limit', 10));
+        $limit = min((int) $request->integer('limit', 10), 20);
+
+        $areas = $this->areas->search($term, $limit);
 
         return response()->json(
             $areas->map(

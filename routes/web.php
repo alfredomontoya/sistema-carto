@@ -24,13 +24,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/usuarios/buscar', [UserLookupController::class, 'search'])->name('users.search');
-    Route::get('/areas/buscar', [AreaLookupController::class, 'search'])->name('areas.search');
+    Route::get('/usuarios/buscar', [UserLookupController::class, 'search'])
+        ->middleware('throttle:30,1')
+        ->name('users.search');
+    Route::get('/areas/buscar', [AreaLookupController::class, 'search'])
+        ->middleware('throttle:30,1')
+        ->name('areas.search');
 
     Route::get('/comunicaciones', [CommunicationController::class, 'index'])->name('communications.index');
     Route::get('/comunicaciones/crear', [CommunicationController::class, 'create'])->name('communications.create');
     Route::post('/comunicaciones', [CommunicationController::class, 'store'])->name('communications.store');
-    Route::get('/comunicaciones/{communication}/editar', [CommunicationController::class, 'edit'])->name('communications.edit');
     Route::put('/comunicaciones/{communication}', [CommunicationController::class, 'update'])->name('communications.update');
     Route::post('/comunicaciones/{communication}/anular', [CommunicationController::class, 'annul'])->name('communications.annul');
     Route::get('/comunicaciones/{communication}/descargar', [CommunicationController::class, 'download'])->name('communications.download');

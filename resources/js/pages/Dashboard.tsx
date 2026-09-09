@@ -5,6 +5,7 @@ import { router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
 import { useState } from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
+import { CelebrateConfetti } from '@/components/CelebrateConfetti';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,15 +13,16 @@ import { Switch } from '@/components/ui/switch';
 import { ChartDataTable, DestinoBarChart, MonthlyStackedBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
 import type { DestinoStat } from '@/components/charts';
 import AppLayout from '@/layouts/AppLayout';
-import type { UserData } from '@/types';
+import type { FlashData, UserData } from '@/types';
 
-type Period = 'hoy' | 'ayer' | 'semana' | 'mes' | 'rango';
+type Period = 'hoy' | 'ayer' | 'semana' | 'mes' | 'año' | 'rango';
 
 const PERIOD_LABELS: Record<Period, string> = {
     hoy: 'Hoy',
     ayer: 'Ayer',
     semana: 'Semana',
     mes: 'Mes',
+    año: 'Año',
     rango: 'Fecha',
 };
 
@@ -41,10 +43,13 @@ export default function Dashboard() {
         period: Period;
         dateFrom: string;
         dateTo: string;
+        periodYear: number;
         includeAnnulled: boolean;
     };
     const { auth, stats, selectedYear, availableYears, isAdmin } = props;
-    const { destinoStats, userStats, period, dateFrom, dateTo, includeAnnulled } = props;
+    const { destinoStats, userStats, period, dateFrom, dateTo, periodYear, includeAnnulled } = props;
+    const flash = usePage().props.flash as FlashData | undefined;
+    const celebrateCount = typeof flash?.celebrate === 'number' ? flash.celebrate : 0;
     const user = auth.user;
     const isBasic =
         !user.can.manage_users && !user.can.manage_areas && !user.can.manage_settings;
@@ -79,12 +84,13 @@ export default function Dashboard() {
         router.get(route('dashboard'), { year }, { preserveState: true, preserveScroll: true });
     };
 
-    const applyPeriod = (p: Period, rangeFrom?: string, rangeTo?: string, annulled?: boolean) => {
+    const applyPeriod = (p: Period, rangeFrom?: string, rangeTo?: string, annulled?: boolean, year?: number) => {
         router.get(
             route('dashboard'),
             {
                 year: selectedYear,
                 period: p,
+                period_year: year ?? periodYear,
                 annulled: (annulled ?? includeAnnulled) ? 1 : 0,
                 ...(p === 'rango' ? { from: rangeFrom, to: rangeTo } : {}),
             },
@@ -110,6 +116,7 @@ export default function Dashboard() {
     return (
         <AppLayout>
             <FlashMessages />
+            <CelebrateConfetti count={celebrateCount} />
             <div className="space-y-6">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">
@@ -223,6 +230,11 @@ export default function Dashboard() {
                                     />
                                     Incluir anuladas
                                 </label>
+                                <YearSelector
+                                    value={periodYear}
+                                    options={availableYears}
+                                    onChange={(y) => applyPeriod(period, from, to, undefined, y)}
+                                />
                         </div>
 
                         {period === 'rango' && (
