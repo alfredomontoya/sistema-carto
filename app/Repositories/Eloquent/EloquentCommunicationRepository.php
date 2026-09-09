@@ -5,7 +5,9 @@ namespace App\Repositories\Eloquent;
 use App\Models\Communication;
 use App\Repositories\Contracts\CommunicationRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class EloquentCommunicationRepository implements CommunicationRepository
@@ -57,6 +59,56 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * @return array{string, array<int, string>}
+     */
+    private function typeCountColumns(string $table = ''): array
+    {
+        $type = $table === '' ? '`type`' : "`{$table}`.`type`";
+
+        $raw = "SUM(CASE WHEN {$type} = ? THEN 1 ELSE 0 END) as `ci`, "
+            ."SUM(CASE WHEN {$type} = ? THEN 1 ELSE 0 END) as `of`, "
+            .'COUNT(*) as `total`';
+
+        return [$raw, [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL]];
+    }
+
+    /**
+     * @param  Builder<Communication>  $query
+     */
+    private function applyStatsScope(Builder $query, string $table, mixed $from, mixed $to, ?string $areaId, ?string $userId, bool $onlyActive): void
+    {
+        $prefix = $table === '' ? '' : "{$table}.";
+
+        $query->whereBetween("{$prefix}created_at", [$from, $to]);
+
+        if ($onlyActive) {
+            $query->where("{$prefix}status", Communication::STATUS_ACTIVE);
+        }
+
+        if ($areaId) {
+            $query->where("{$prefix}area_id", $areaId);
+        }
+
+        if ($userId) {
+            $query->where("{$prefix}user_id", $userId);
+        }
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $rows
+     * @return array<int, array{destino: string, ci: int, of: int, total: int}>
+     */
+    private function mapGroupedStats(Collection $rows, callable $label): array
+    {
+        return $rows->map(fn ($row) => [
+            'destino' => (string) $label($row),
+            'ci' => (int) $row->ci,
+            'of' => (int) $row->of,
+            'total' => (int) $row->total,
+        ])->values()->all();
+    }
+
+    /**
      * @return array<int, array{month: int, ci: int, of: int, total: int}>
      */
     public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array
@@ -64,18 +116,12 @@ class EloquentCommunicationRepository implements CommunicationRepository
         $start = Carbon::create($year, 1, 1)->startOfDay();
         $end = Carbon::create($year, 12, 31)->endOfDay();
 
-        $query = Communication::query()
-            ->selectRaw('
-                MONTH(`created_at`) as `month`,
-                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `ci`,
-                SUM(CASE WHEN `type` = ? THEN 1 ELSE 0 END) as `of`,
-                COUNT(*) as `total`
-            ', [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereBetween('created_at', [$start, $end])
-            ->where('status', Communication::STATUS_ACTIVE);
+        [$columns, $bindings] = $this->typeCountColumns();
 
-        if ($areaId) $query->where('area_id', $areaId);
-        if ($userId) $query->where('user_id', $userId);
+        $query = Communication::query()
+            ->selectRaw('MONTH(`created_at`) as `month`, '.$columns, $bindings);
+
+        $this->applyStatsScope($query, '', $start, $end, $areaId, $userId, true);
 
         return $query->groupBy('month')
             ->orderBy('month')
@@ -113,35 +159,21 @@ class EloquentCommunicationRepository implements CommunicationRepository
      */
     public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array
     {
+        [$columns, $bindings] = $this->typeCountColumns('communications');
+
         $query = Communication::query()
             ->leftJoin('areas as destino_areas', 'destino_areas.id', '=', 'communications.area_destino_id')
             ->selectRaw("
                 COALESCE(`destino_areas`.`code`, NULLIF(`communications`.`area_destino_nombre`, ''), 'Sin destino') as `destino`,
-                SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `ci`,
-                SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `of`,
-                COUNT(*) as `total`
-            ", [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereBetween('communications.created_at', [$from, $to]);
+                {$columns}
+            ", $bindings);
 
-        if (! $includeAnnulled) {
-            $query->where('communications.status', Communication::STATUS_ACTIVE);
-        }
+        $this->applyStatsScope($query, 'communications', $from, $to, $areaId, $userId, ! $includeAnnulled);
 
-        if ($areaId) $query->where('communications.area_id', $areaId);
-        if ($userId) $query->where('communications.user_id', $userId);
-
-        return $query->groupBy('destino')
-            ->orderByDesc('total')
-            ->limit(15)
-            ->get()
-            ->map(fn ($row) => [
-                'destino' => (string) $row->destino,
-                'ci' => (int) $row->ci,
-                'of' => (int) $row->of,
-                'total' => (int) $row->total,
-            ])
-            ->values()
-            ->all();
+        return $this->mapGroupedStats(
+            $query->groupBy('destino')->orderByDesc('total')->limit(15)->get(),
+            fn ($row) => $row->destino,
+        );
     }
 
     /**
@@ -149,34 +181,17 @@ class EloquentCommunicationRepository implements CommunicationRepository
      */
     public function getUserStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array
     {
+        [$columns, $bindings] = $this->typeCountColumns('communications');
+
         $query = Communication::query()
             ->join('users', 'users.id', '=', 'communications.user_id')
-            ->selectRaw("
-                `users`.`email` as `user_email`,
-                SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `ci`,
-                SUM(CASE WHEN `communications`.`type` = ? THEN 1 ELSE 0 END) as `of`,
-                COUNT(*) as `total`
-            ", [Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])
-            ->whereBetween('communications.created_at', [$from, $to]);
+            ->selectRaw("`users`.`email` as `user_email`, {$columns}", $bindings);
 
-        if (! $includeAnnulled) {
-            $query->where('communications.status', Communication::STATUS_ACTIVE);
-        }
+        $this->applyStatsScope($query, 'communications', $from, $to, $areaId, $userId, ! $includeAnnulled);
 
-        if ($areaId) $query->where('communications.area_id', $areaId);
-        if ($userId) $query->where('communications.user_id', $userId);
-
-        return $query->groupBy('users.id', 'users.email')
-            ->orderByDesc('total')
-            ->limit(15)
-            ->get()
-            ->map(fn ($row) => [
-                'destino' => (string) Str::before($row->user_email, '@'),
-                'ci' => (int) $row->ci,
-                'of' => (int) $row->of,
-                'total' => (int) $row->total,
-            ])
-            ->values()
-            ->all();
+        return $this->mapGroupedStats(
+            $query->groupBy('users.id', 'users.email')->orderByDesc('total')->limit(15)->get(),
+            fn ($row) => Str::before($row->user_email, '@'),
+        );
     }
 }

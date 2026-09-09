@@ -105,6 +105,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether the user sees global (unscoped) dashboard stats.
+     */
+    public function seesGlobalStats(): bool
+    {
+        return $this->can('manage areas') || $this->can('manage users') || $this->can('manage settings');
+    }
+
+    /**
      * All past + current position assignments.
      *
      * @return HasMany<PositionAssignment, $this>

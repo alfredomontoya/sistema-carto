@@ -27,7 +27,7 @@
 - `/admin/areas` (índice con árbol recursivo y CRUD)
 - `/admin/positions` (CRUD de puestos, permiso `manage areas`)
 - `/admin/settings` (solo nombre del sistema)
-- `/usuarios/buscar`, `/areas/buscar` — autocomplete JSON (auth, top 10)
+- `/usuarios/buscar`, `/areas/buscar` — autocomplete JSON (auth, top 10, `throttle:30,1`; `LIKE '%term%'` no usa índices: aceptable a esta escala, migrar a fulltext si crece)
 
 ## Frontend
 

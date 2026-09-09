@@ -20,13 +20,22 @@ class BrandSettingsService
      */
     public function get(): array
     {
-        return Cache::remember(self::CACHE_KEY, 3600, fn (): array => [
-            'app_name' => $this->settings->get('brand.app_name', config('brand.app_name')),
-            'primary_color' => $this->settings->get('brand.primary_color', config('brand.primary_color')),
-            'secondary_color' => $this->settings->get('brand.secondary_color', config('brand.secondary_color')),
-            'logo_file' => $this->settings->get('brand.logo', config('brand.logo')),
-            'favicon_file' => $this->settings->get('brand.favicon', config('brand.favicon')),
-        ]);
+        return Cache::remember(self::CACHE_KEY, 3600, function (): array {
+            $all = $this->settings->all()->keyBy('key');
+
+            $value = fn (string $key, mixed $default): mixed =>
+                $all->has($key) && $all->get($key)->value !== null
+                    ? $all->get($key)->value
+                    : $default;
+
+            return [
+                'app_name' => $value('brand.app_name', config('brand.app_name')),
+                'primary_color' => $value('brand.primary_color', config('brand.primary_color')),
+                'secondary_color' => $value('brand.secondary_color', config('brand.secondary_color')),
+                'logo_file' => $value('brand.logo', config('brand.logo')),
+                'favicon_file' => $value('brand.favicon', config('brand.favicon')),
+            ];
+        });
     }
 
     /**

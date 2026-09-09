@@ -1,7 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { Download, FileText, Pencil, Plus, Search, ShieldX } from 'lucide-react';
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useEffectOnUpdate } from '@/lib/use-effect-on-update';
 import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
 import { CommunicationCreateDialog } from '@/components/communications/CommunicationCreateDialog';
@@ -79,7 +80,6 @@ export default function CommunicationsIndex({
     const [selected, setSelected] = useState<CommunicationData | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<CommunicationData | null>(null);
-    const firstRender = useRef(true);
 
     const showTarget = fromCreate ?? selected;
     const dialogOpen = showTarget !== null;
@@ -112,17 +112,12 @@ export default function CommunicationsIndex({
         );
     };
 
-    useEffect(() => {
-        if (firstRender.current) return;
+    useEffectOnUpdate(() => {
         const timeout = setTimeout(() => applyFilters(), 350);
         return () => clearTimeout(timeout);
     }, [search]);
 
-    useEffect(() => {
-        if (firstRender.current) {
-            firstRender.current = false;
-            return;
-        }
+    useEffectOnUpdate(() => {
         applyFilters();
     }, [type, status, areaId, dateFrom, dateTo]);
 

@@ -164,7 +164,7 @@ class CommunicationService
         $cacheKey = $this->buildStatsCacheKey($user, $year);
 
         return Cache::remember($cacheKey, 300, function () use ($user, $year) {
-            $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+            $isAdmin = $user->seesGlobalStats();
 
             $areaId = $isAdmin ? null : $user->currentArea?->id;
             $userId = $isAdmin ? null : $user->id;
@@ -175,7 +175,7 @@ class CommunicationService
 
     public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
-        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $isAdmin = $user->seesGlobalStats();
         $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
@@ -190,7 +190,7 @@ class CommunicationService
 
     public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
-        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $isAdmin = $user->seesGlobalStats();
         $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:usuarios:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
@@ -205,7 +205,7 @@ class CommunicationService
 
     public function getAvailableYears(User $user): array
     {
-        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $isAdmin = $user->seesGlobalStats();
         $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
         $cacheKey = "dashboard:years:v{$this->statsVersion()}:{$scope}";
 
@@ -219,7 +219,7 @@ class CommunicationService
 
     private function buildStatsCacheKey(User $user, int $year): string
     {
-        $isAdmin = $user->can('manage areas') || $user->can('manage users') || $user->can('manage settings');
+        $isAdmin = $user->seesGlobalStats();
         $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
         return "dashboard:stats:v{$this->statsVersion()}:{$scope}:{$year}";
     }

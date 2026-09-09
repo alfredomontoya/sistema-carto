@@ -8,13 +8,6 @@ use Illuminate\Support\Collection;
 
 class UserResource extends JsonResource
 {
-    public function __construct(
-        $resource,
-        private readonly bool $isAdmin = false,
-    ) {
-        parent::__construct($resource);
-    }
-
     /**
      * Transform the resource into an array.
      *
@@ -57,9 +50,9 @@ class UserResource extends JsonResource
                     : null,
             ),
             'can' => [
-                'manage_users' => $this->isAdmin,
-                'manage_areas' => $this->isAdmin,
-                'manage_settings' => $this->isAdmin,
+                'manage_users' => $this->can('manage users'),
+                'manage_areas' => $this->can('manage areas'),
+                'manage_settings' => $this->can('manage settings'),
             ],
         ];
     }

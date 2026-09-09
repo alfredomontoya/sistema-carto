@@ -33,7 +33,7 @@ class DashboardController extends Controller
 
         $stats = $this->communications->getDashboardStats($request->user(), $year);
         $availableYears = $this->communications->getAvailableYears($request->user());
-        $isAdmin = $request->user()->can('manage areas') || $request->user()->can('manage users') || $request->user()->can('manage settings');
+        $isAdmin = $request->user()->seesGlobalStats();
 
         [$period, $from, $to, $periodYear] = $this->resolvePeriod($request);
         $includeAnnulled = $request->boolean('annulled', false);

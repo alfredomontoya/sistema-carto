@@ -53,7 +53,7 @@ class CommunicationController extends Controller
         );
 
         $request->user()->loadMissing('currentAssignment.position.area');
-        $isAdmin = $request->user()->can('manage users') || $request->user()->can('manage areas') || $request->user()->can('manage settings');
+        $isAdmin = $request->user()->seesGlobalStats();
 
         return Inertia::render('Communications/Index', [
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
@@ -98,7 +98,7 @@ class CommunicationController extends Controller
             'recipientUser.currentAssignment.position.area',
         ]);
 
-        $isAdmin = $request->user()->can('manage users') || $request->user()->can('manage areas') || $request->user()->can('manage settings');
+        $isAdmin = $request->user()->seesGlobalStats();
 
         return redirect()
             ->route('communications.index')

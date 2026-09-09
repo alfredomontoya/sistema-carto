@@ -15,6 +15,12 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        $password = env('ADMIN_PASSWORD', 'password');
+
+        if (app()->isProduction() && $password === 'password') {
+            throw new \RuntimeException('Define ADMIN_PASSWORD con una clave segura antes de sembrar en producción.');
+        }
+
         $email = env('ADMIN_EMAIL') !== null
             ? env('ADMIN_EMAIL')
             : UserService::emailFor(env('ADMIN_USERNAME', 'admin'));
@@ -23,7 +29,7 @@ class AdminUserSeeder extends Seeder
             ['email' => $email],
             [
                 'name' => 'Administrador',
-                'password' => env('ADMIN_PASSWORD', 'password'),
+                'password' => $password,
                 'is_active' => true,
                 'avatar_kind' => 'gallery',
                 'avatar_value' => 'ocean',

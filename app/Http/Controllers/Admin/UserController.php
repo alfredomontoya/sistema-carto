@@ -29,7 +29,7 @@ class UserController extends Controller
         );
 
         return Inertia::render('Admin/Users/Index', [
-            'users' => UserResource::collection($users, true)->resolve(),
+            'users' => UserResource::collection($users)->resolve(),
             'filters' => $request->only(['search', 'role', 'area_id']),
             'roles' => $this->users->availableRoles()->toArray(),
             'areas' => $this->areas->tree(),
@@ -77,7 +77,7 @@ class UserController extends Controller
         $user->load(['roles', 'currentAssignment.position.area', 'assignmentHistory.position.area']);
 
         return Inertia::render('Admin/Users/Edit', [
-            'user' => UserResource::make($user, true)->resolve(),
+            'user' => UserResource::make($user)->resolve(),
             'roles' => $this->users->availableRoles()->toArray(),
             'areas' => $this->areas->tree(),
             'position_history' => $user->assignmentHistory->map(

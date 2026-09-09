@@ -34,22 +34,14 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        $isAdmin = false;
-        $currentArea = null;
-        $currentPosition = null;
-
         if ($user !== null) {
             $isLookup = $request->routeIs('users.search') || $request->routeIs('areas.search');
 
             if (! $isLookup) {
                 $user->load(['roles', 'currentAssignment.position.area']);
-                $currentArea = $user->currentArea;
-                $currentPosition = $user->currentAssignment?->position;
             } else {
                 $user->load('roles');
             }
-
-            $isAdmin = $user->can('manage users') || $user->can('manage areas') || $user->can('manage settings');
         }
 
         /** @var BrandSettingsService $brand */
@@ -62,7 +54,7 @@ class HandleInertiaRequests extends Middleware
                 'user_domain' => (string) config('auth.user_domain'),
             ],
             'auth' => [
-                'user' => $user ? UserResource::make($user, $isAdmin)->resolve() : null,
+                'user' => $user ? UserResource::make($user)->resolve() : null,
             ],
             'brand' => Inertia::lazy(fn () => $brand->withUrls()),
             'flash' => [
