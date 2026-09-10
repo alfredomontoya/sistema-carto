@@ -17,17 +17,8 @@ class PasswordRecoveryController extends Controller
         private readonly PasswordRecoveryService $recovery,
     ) {}
 
-    private function ensureEnabled(): void
-    {
-        if (! $this->recovery->enabled()) {
-            abort(404);
-        }
-    }
-
     public function create(): Response
     {
-        $this->ensureEnabled();
-
         return Inertia::render('Auth/ForgotPassword', [
             'status' => session('status'),
         ]);
@@ -35,8 +26,6 @@ class PasswordRecoveryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->ensureEnabled();
-
         $request->validate(['email' => ['required', 'email', 'max:255']]);
 
         $this->recovery->requestReset($request->input('email'));
@@ -49,8 +38,6 @@ class PasswordRecoveryController extends Controller
 
     public function reset(string $token): Response
     {
-        $this->ensureEnabled();
-
         return Inertia::render('Auth/ResetPassword', [
             'token' => $token,
             'email' => (string) request()->query('email', ''),
@@ -59,8 +46,6 @@ class PasswordRecoveryController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $this->ensureEnabled();
-
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email', 'max:255'],
@@ -81,19 +66,17 @@ class PasswordRecoveryController extends Controller
 
         return redirect()->route('login')->with(
             'status',
-            'Contraseña restablecida. Inicia sesión y actualízala por una definitiva.'
+            'Contraseña restablecida. Ya puedes iniciar sesión.'
         );
     }
 
-    public function verify(Request $request, string $id): RedirectResponse
+    public function verify(Request $request, string $id, string $email): RedirectResponse
     {
-        $this->ensureEnabled();
-
         $user = User::find($id);
 
         if ($user === null
             || $user->recovery_email === null
-            || $user->recovery_email !== $request->query('email')
+            || $user->recovery_email !== $email
         ) {
             return redirect()->route('login')->with(
                 'error',
@@ -103,9 +86,9 @@ class PasswordRecoveryController extends Controller
 
         $this->recovery->verifyRecoveryEmail($user);
 
-        return redirect()->route('login')->with(
+        return redirect()->route('recovery.request')->with(
             'status',
-            'Correo verificado. Ya puedes recuperar tu contraseña con él.'
+            'Correo verificado. Solicita tu enlace para restablecer la contraseña.'
         );
     }
 }

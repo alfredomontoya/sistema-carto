@@ -57,7 +57,7 @@ export default function Login({ status, canResetPassword }: { status?: string; c
                         autoComplete="username"
                         autoFocus
                         onChange={(e) => setData('username', e.target.value)}
-                        placeholder="amontoya"
+                        placeholder="Ingrese usuario"
                     />
                     <p className="text-xs text-muted-foreground">
                         Tu usuario de @{userDomain}
@@ -75,7 +75,7 @@ export default function Login({ status, canResetPassword }: { status?: string; c
                         value={data.password}
                         autoComplete="current-password"
                         onChange={(e) => setData('password', e.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Ingrese contraseña"
                     />
                     {errors.password && (
                         <p className="text-sm text-destructive">{errors.password}</p>

@@ -26,8 +26,8 @@ export default function ResetPassword({ token, email }: { token: string; email: 
             <div className="mb-6">
                 <h1 className="text-xl font-bold text-foreground">Restablecer contraseña</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Elige una contraseña nueva para {email || 'tu cuenta'}. Luego deberás
-                    actualizarla por una definitiva al entrar.
+                    Elige una contraseña nueva para {email || 'tu cuenta'}. Con ella podrás
+                    iniciar sesión directamente.
                 </p>
             </div>
 

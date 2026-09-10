@@ -123,7 +123,8 @@ class PasswordRecoveryService
         DB::table('password_recovery_tokens')->where('email', $email)->delete();
 
         $this->users->updatePassword($user, $password);
-        $this->users->setMustChangePassword($user, true);
+        $this->users->setMustChangePassword($user, false);
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
         DB::table('sessions')->where('user_id', $user->id)->delete();
 
         return true;

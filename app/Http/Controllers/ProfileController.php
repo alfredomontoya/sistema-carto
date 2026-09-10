@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
@@ -70,8 +71,13 @@ class ProfileController extends Controller
                 ->withErrors(['password' => 'La nueva contraseña debe ser diferente a la actual.']);
         }
 
+        Auth::logoutOtherDevices($request->input('current_password'));
+
         $this->users->updatePassword($request->user(), $request->input('password'));
-        $this->users->setMustChangePassword($request->user(), false);
+        DB::table('sessions')
+            ->where('user_id', $request->user()->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
 
         return Redirect::route('profile.edit')->with('success', 'Contraseña actualizada correctamente.');
     }

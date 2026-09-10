@@ -22,7 +22,7 @@ createInertiaApp({
         root.render(
             <ThemeProvider>
                 <App {...props} />
-                <Toaster richColors position="top-right" />
+                <Toaster richColors position="top-right" offset={{ top: '80px' }} closeButton />
             </ThemeProvider>,
         );
     },

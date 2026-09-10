@@ -29,7 +29,7 @@ class VerifyRecoveryEmail extends Notification
         $url = URL::temporarySignedRoute(
             'recovery.verify',
             now()->addHours(24),
-            ['user' => $this->user->id],
+            ['user' => $this->user->id, 'email' => $this->user->recovery_email],
         );
 
         return (new MailMessage)

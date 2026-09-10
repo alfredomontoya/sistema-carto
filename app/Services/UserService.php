@@ -84,7 +84,14 @@ class UserService
 
     public function updatePassword(User $user, string $password): User
     {
-        return $this->users->update($user, ['password' => $password, 'password_changed_at' => now()]);
+        $user = $this->users->update($user, [
+            'password' => $password,
+            'password_changed_at' => now(),
+            'must_change_password' => false,
+        ]);
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
+
+        return $user;
     }
 
     /**
@@ -97,6 +104,7 @@ class UserService
             'must_change_password' => true,
             'password_changed_at' => now(),
         ]);
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
 
         DB::table('sessions')->where('user_id', $user->id)->delete();
     }

@@ -85,7 +85,7 @@ class PasswordRecoveryTest extends TestCase
 
         // visit the signed path only (host differs in tests)
         $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
-        $this->get($path)->assertRedirect(route('login'));
+        $this->get($path)->assertRedirect(route('recovery.request'));
 
         $this->assertNotNull($user->fresh()->recovery_email_verified_at);
     }
@@ -121,7 +121,7 @@ class PasswordRecoveryTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_reset_with_valid_token_changes_password_and_forces_change(): void
+    public function test_reset_with_valid_token_changes_password_without_forcing_change(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->enableRecovery();
@@ -153,7 +153,7 @@ class PasswordRecoveryTest extends TestCase
         $response->assertRedirect(route('login'));
         $user->refresh();
         $this->assertTrue(Hash::check('nueva-clave-123', $user->password));
-        $this->assertTrue((bool) $user->must_change_password);
+        $this->assertFalse((bool) $user->must_change_password);
         $this->assertSame(0, DB::table('password_recovery_tokens')->count());
     }
 
