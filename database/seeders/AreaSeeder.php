@@ -13,6 +13,7 @@ class AreaSeeder extends Seeder
      *   DIRECCION DE ORDENAMIENTO TERRITORIAL (dot)
      *     DEPARTAMENTO DE CARTOGRAFIA (carto)
      *     DEPARTAMENTO DE TAES (taes) -> owns its own sequence (ci.taes.XXXX)
+     * OTRO (otro, root) -> default destination area for unregistered destinations
      */
     public function run(): void
     {
@@ -23,6 +24,8 @@ class AreaSeeder extends Seeder
         $this->upsertArea('carto', 'DEPARTAMENTO DE CARTOGRAFIA', 'dot');
 
         $this->upsertArea('taes', 'DEPARTAMENTO DE TAES', 'dot');
+
+        $this->upsertArea('otro', 'OTRO');
     }
 
     private function upsertArea(string $code, string $name, ?string $parentCode = null, ?string $numberingForCode = null): void

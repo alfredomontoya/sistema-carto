@@ -37,12 +37,7 @@ class StoreCommunicationRequest extends FormRequest
             'recipient_position' => ['required', 'string', 'max:255'],
             'recipient_user_id' => ['nullable', 'uuid', 'exists:users,id'],
             'area_destino_id' => ['nullable', 'uuid', 'exists:areas,id'],
-            'area_destino_nombre' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::requiredIf($this->input('type') === Communication::TYPE_INTERNAL),
-            ],
+            'area_destino_nombre' => ['nullable', 'string', 'max:255'],
             'file' => [
                 'nullable',
                 'file',

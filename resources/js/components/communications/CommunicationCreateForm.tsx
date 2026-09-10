@@ -52,13 +52,6 @@ export function CommunicationCreateForm({
             setError('recipient_position', 'El puesto del destinatario es obligatorio.');
             ok = false;
         }
-        if (data.type === 'ci' && !data.area_destino_nombre.trim()) {
-            setError(
-                'area_destino_nombre',
-                'El área destino es obligatoria para comunicaciones internas.',
-            );
-            ok = false;
-        }
         if (!ok) {
             toast.error('Hay errores de validación', {
                 description: 'Revisa los campos marcados en el formulario.',

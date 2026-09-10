@@ -38,6 +38,8 @@ class SettingsTest extends TestCase
     {
         $response = $this->actingAs($this->admin())->put('/admin/settings', [
             'app_name' => 'Sistema Nuevo',
+            'password_expiry_days' => 90,
+            'password_recovery_enabled' => false,
         ]);
 
         $response->assertRedirect(route('admin.settings.index'));

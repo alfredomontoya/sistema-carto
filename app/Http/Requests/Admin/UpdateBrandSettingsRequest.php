@@ -26,6 +26,8 @@ class UpdateBrandSettingsRequest extends FormRequest
     {
         return [
             'app_name' => ['required', 'string', 'max:120'],
+            'password_expiry_days' => ['required', 'integer', 'min:1', 'max:365'],
+            'password_recovery_enabled' => ['required', 'boolean'],
         ];
     }
 }

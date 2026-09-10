@@ -39,9 +39,11 @@ interface CommunicationRepository
     public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array;
 
     /**
+     * @param  array<int, string>|null  $scopeAreaIds  when given, every listed area
+     *                                                  appears even with zero counts
      * @return array<int, array{destino: string, ci: int, of: int, total: int}>
      */
-    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array;
+    public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false, ?array $scopeAreaIds = null): array;
 
     /**
      * @return array<int, array{destino: string, ci: int, of: int, total: int}>

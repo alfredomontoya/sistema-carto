@@ -55,7 +55,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
   - **Referencia**: texto libre (input de una línea).
   - **Remitente**: nombre y puesto del usuario logueado (no editable).
   - **Destinatario**: nombre y puesto (buscador de usuarios internos + texto libre). Ambos obligatorios.
-  - **Área destino**: opcional, con doble modalidad — selección de un área registrada (autocomplete `/areas/buscar`, top 10, navegable con ↑/↓/Enter/click, limpiable a nulo) o nombre en texto libre. Se guarda `area_destino_id` (FK nullable) + `area_destino_nombre`. **Obligatoria (el nombre) cuando es `ci`**; opcional en `of`.
+  - **Área destino**: opcional siempre (puede quedar vacía), con doble modalidad — selección de un área registrada (autocomplete `/areas/buscar`, top 10, navegable con ↑/↓/Enter/click, limpiable a nulo) o nombre en texto libre. Se guarda `area_destino_id` (FK nullable) + `area_destino_nombre`. Sin área registrada, apunta al área raíz `OTRO` (creada por semilla y por demanda): con texto libre se conserva el texto, vacía se etiqueta `OTRO`.
   - **Adjunto**: opcional, PDF, Word o imagen.
 - **Estado**: `activo` o `anulado`. **Anular no libera el número**.
 - **Solo el creador o un administrador puede editar/anular** una comunicación mientras esté activa (`CommunicationPolicy::edit`).
@@ -111,7 +111,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 
 - Anular no libera el número; los correlativos nunca se reutilizan.
 - `communications.area_id` guarda el área real, no el área de numeración.
-- El área destino es obligatoria (nombre) en `ci` y opcional en `of`; puede ser área registrada o texto libre.
+- El área destino es opcional en `ci` y `of`; puede quedar vacía, ser área registrada o texto libre.
 - `User::currentArea` es accesor, no relación: cargar con `currentAssignment.position.area`.
 - Siempre consultar la asignación actual con `$user->currentAssignment()->first()` (no la relación cacheada).
 - Eliminar un usuario con comunicaciones creadas está bloqueado.

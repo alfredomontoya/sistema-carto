@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Communication;
 use App\Models\User;
+use App\Repositories\Contracts\AreaRepository;
 use App\Repositories\Contracts\CommunicationRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
@@ -22,7 +23,31 @@ class CommunicationService
     public function __construct(
         private readonly CommunicationRepository $communications,
         private readonly NumberSequenceService $numbers,
+        private readonly AreaService $areas,
+        private readonly AreaRepository $areaRepository,
     ) {}
+
+    /**
+     * Resolve the destination area, falling back to the default OTRO
+     * area when none is registered. Keeps a typed free-text name,
+     * or labels it OTRO when empty.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveDestino(array &$payload): void
+    {
+        if (! empty($payload['area_destino_id'])) {
+            return;
+        }
+
+        $default = $this->areas->defaultArea();
+
+        $payload['area_destino_id'] = $default->id;
+
+        if (empty($payload['area_destino_nombre'])) {
+            $payload['area_destino_nombre'] = $default->name;
+        }
+    }
 
     /**
      * @return array{
@@ -92,6 +117,8 @@ class CommunicationService
                 'status' => Communication::STATUS_ACTIVE,
             ];
 
+            $this->resolveDestino($payload);
+
             if ($file !== null) {
                 $this->storeFile($file, $payload);
             }
@@ -126,6 +153,8 @@ class CommunicationService
                 'area_destino_id' => $data['area_destino_id'] ?? null,
                 'area_destino_nombre' => $data['area_destino_nombre'] ?? null,
             ];
+
+            $this->resolveDestino($payload);
 
             if ($file !== null) {
                 $this->deleteFile($communication);
@@ -176,16 +205,45 @@ class CommunicationService
     public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
         $isAdmin = $user->seesGlobalStats();
-        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $scopeAreaIds = $this->resolveDestinoScope($user);
+        $scope = $scopeAreaIds === null
+            ? ($isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}")
+            : 'areas_'.md5(implode(',', [...$scopeAreaIds]));
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $includeAnnulled) {
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $scopeAreaIds, $includeAnnulled) {
             $areaId = $isAdmin ? null : $user->currentArea?->id;
             $userId = $isAdmin ? null : $user->id;
 
-            return $this->communications->getDestinoStats($from, $to, $areaId, $userId, $includeAnnulled);
+            return $this->communications->getDestinoStats($from, $to, $areaId, $userId, $includeAnnulled, $scopeAreaIds);
         });
+    }
+
+    /**
+     * Areas visible in the destino stats: every area for administrators,
+     * the own subtree for jefes, null (legacy data-driven rows) for the rest.
+     *
+     * @return array<int, string>|null
+     */
+    private function resolveDestinoScope(User $user): ?array
+    {
+        if ($user->hasRole('administrador')) {
+            return $this->areaRepository->all()->pluck('id')->all();
+        }
+
+        if ($user->hasRole('jefe')) {
+            $user->loadMissing('currentAssignment.position.area');
+            $area = $user->currentArea;
+
+            if ($area === null) {
+                return [];
+            }
+
+            return array_merge([$area->id], $this->areaRepository->descendantIds($area));
+        }
+
+        return null;
     }
 
     public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false): array

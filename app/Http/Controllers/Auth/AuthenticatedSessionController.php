@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\CommunicationService;
+use App\Services\PasswordRecoveryService;
+use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +19,8 @@ class AuthenticatedSessionController extends Controller
 {
     public function __construct(
         private readonly CommunicationService $communications,
+        private readonly UserService $users,
+        private readonly PasswordRecoveryService $recovery,
     ) {}
     /**
      * Display the login view.
@@ -24,7 +28,7 @@ class AuthenticatedSessionController extends Controller
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
-            'canResetPassword' => Route::has('password.request'),
+            'canResetPassword' => $this->recovery->enabled(),
             'status' => session('status'),
         ]);
     }
@@ -55,6 +59,14 @@ class AuthenticatedSessionController extends Controller
 
         if ($ranking['is_top']) {
             $redirect->with('celebrate', $ranking['count']);
+        }
+
+        $daysLeft = $this->users->passwordDaysLeft($request->user());
+
+        if ($daysLeft <= 3) {
+            $redirect->with('warning', $daysLeft <= 0
+                ? 'Tu contraseña ya venció. Actualízala cuanto antes.'
+                : "Tu contraseña vence en {$daysLeft} ".($daysLeft === 1 ? 'día' : 'días').'. Actualízala pronto.');
         }
 
         return $redirect;

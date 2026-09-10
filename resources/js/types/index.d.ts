@@ -54,6 +54,9 @@ export interface UserData {
     avatar_value: string | null;
     avatar_url: string | null;
     is_active: boolean;
+    must_change_password: boolean;
+    recovery_email: string | null;
+    recovery_email_verified: boolean;
     created_at: string | null;
     roles: string[];
     role_ids: number[];
@@ -134,6 +137,7 @@ export interface CountersData {
 export interface FlashData {
     success?: string | null;
     error?: string | null;
+    warning?: string | null;
     celebrate?: number | null;
 }
 

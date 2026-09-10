@@ -14,6 +14,7 @@ export function AvatarPicker({
     gallery,
     selected,
     uploading,
+    uploadError,
     onSelect,
     onUpload,
 }: {
@@ -21,6 +22,7 @@ export function AvatarPicker({
     gallery: AvatarGalleryEntry;
     selected: string | null;
     uploading: boolean;
+    uploadError?: string | null;
     onSelect: (key: string) => void;
     onUpload: (file: File) => void;
 }) {
@@ -81,6 +83,12 @@ export function AvatarPicker({
                     <Upload />
                     {uploading ? 'Subiendo…' : 'Subir foto propia'}
                 </Button>
+                <p className="text-xs text-muted-foreground">
+                    JPG, PNG, WEBP o GIF de hasta 2 MB.
+                </p>
+                {uploadError && (
+                    <p className="text-sm text-destructive">{uploadError}</p>
+                )}
             </div>
         </div>
     );

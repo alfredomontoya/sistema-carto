@@ -2,11 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Communication;
 use App\Http\Requests\Concerns\SanitizesInput;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateCommunicationRequest extends FormRequest
 {
@@ -29,20 +27,13 @@ class UpdateCommunicationRequest extends FormRequest
      */
     public function rules(): array
     {
-        $type = Communication::whereKey($this->route('communication'))->value('type');
-
         return [
             'reference' => ['required', 'string', 'max:1000'],
             'recipient_name' => ['required', 'string', 'max:255'],
             'recipient_position' => ['required', 'string', 'max:255'],
             'recipient_user_id' => ['nullable', 'uuid', 'exists:users,id'],
             'area_destino_id' => ['nullable', 'uuid', 'exists:areas,id'],
-            'area_destino_nombre' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::requiredIf($type === Communication::TYPE_INTERNAL),
-            ],
+            'area_destino_nombre' => ['nullable', 'string', 'max:255'],
             'remove_file' => ['nullable', 'boolean'],
             'file' => [
                 'nullable',

@@ -2,9 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Repositories\Contracts\UserRepository;
 use App\Http\Requests\Concerns\SanitizesInput;
-use App\Services\UserService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -15,10 +13,9 @@ class ProfileUpdateRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'name' => $this->sanitizeText($this->input('name')),
-            'username' => $this->sanitizeUsername($this->input('username')),
             'phone' => $this->sanitizePhone($this->input('phone')),
             'address' => $this->sanitizeText($this->input('address')),
+            'recovery_email' => $this->sanitizeUsername($this->input('recovery_email')),
         ]);
     }
 
@@ -27,25 +24,18 @@ class ProfileUpdateRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    public function rules(UserRepository $users): array
+    public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'username' => [
-                'sometimes',
-                'required',
-                'string',
-                'max:64',
-                'regex:/^[a-z0-9._-]+$/i',
-                function (string $attribute, mixed $value, $fail) use ($users): void {
-                    $existing = $users->findByEmail(UserService::emailFor($value));
-                    if ($existing !== null && $existing->id !== $this->user()->id) {
-                        $fail('El usuario ya se encuentra registrado.');
-                    }
-                },
-            ],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'recovery_email' => [
+                'sometimes',
+                'nullable',
+                'email',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users', 'recovery_email')->ignore($this->user()->id),
+            ],
             'avatar_kind' => ['sometimes', 'required', 'string', \Illuminate\Validation\Rule::in(['gallery', 'upload'])],
             'avatar_value' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];

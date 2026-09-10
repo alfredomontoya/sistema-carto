@@ -38,6 +38,19 @@ class AdminUserSeeder extends Seeder
 
         $admin->assignRole('administrador');
 
+        $romer = User::updateOrCreate(
+            ['email' => UserService::emailFor('rtfernandez')],
+            [
+                'name' => 'Romer Teddy Fernandez Garcia',
+                'password' => $password,
+                'is_active' => true,
+                'avatar_kind' => 'gallery',
+                'avatar_value' => 'ocean',
+            ],
+        );
+
+        $romer->syncRoles(['jefe']);
+
         $jefe = Position::where('code', 'jefe')
             ->whereHas('area', fn ($query) => $query->where('code', 'carto'))
             ->first();
@@ -46,6 +59,15 @@ class AdminUserSeeder extends Seeder
             PositionAssignment::create([
                 'position_id' => $jefe->id,
                 'user_id' => $admin->id,
+                'started_at' => now(),
+                'ended_at' => null,
+            ]);
+        }
+
+        if ($jefe !== null && $romer->currentAssignment === null) {
+            PositionAssignment::create([
+                'position_id' => $jefe->id,
+                'user_id' => $romer->id,
                 'started_at' => now(),
                 'ended_at' => null,
             ]);

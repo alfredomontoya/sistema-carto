@@ -17,6 +17,9 @@ export function FlashMessages() {
         if (flash?.error) {
             toast.error(flash.error);
         }
+        if (flash?.warning) {
+            toast.warning(flash.warning, { duration: 8000 });
+        }
     }, [flash]);
 
     React.useEffect(() => {

@@ -10,26 +10,27 @@ export function AppLogo({
     className?: string;
     iconOnly?: boolean;
 }) {
-    const brand = usePage().props.brand as BrandData;
+    const brand = (usePage().props.brand ?? null) as BrandData | null;
+    const appName = brand?.app_name ?? 'CARTO';
 
-    if (brand.logo_url) {
+    if (brand?.logo_url) {
         return (
             <div className={cn('flex items-center gap-2', className)}>
                 <img
                     src={brand.logo_url}
-                    alt={brand.app_name}
+                    alt={appName}
                     className={cn('h-9 w-9 rounded-lg object-contain', iconOnly && 'mx-auto')}
                 />
                 {!iconOnly && (
                     <span className="truncate text-base font-semibold uppercase text-foreground">
-                        {brand.app_name}
+                        {appName}
                     </span>
                 )}
             </div>
         );
     }
 
-    const initials = brand.app_name
+    const initials = appName
         .split(/\s+/)
         .slice(0, 2)
         .map((w) => w[0])
@@ -39,14 +40,14 @@ export function AppLogo({
     return (
         <div className={cn('flex items-center gap-2', className)}>
             <img
-                src={brand.favicon_url ?? '/apple-touch-icon.png'}
-                alt={initials || brand.app_name}
-                title={brand.app_name}
+                src={brand?.favicon_url ?? '/apple-touch-icon.png'}
+                alt={initials || appName}
+                title={appName}
                 className={cn('h-9 w-9 shrink-0 rounded-lg object-contain', iconOnly && 'mx-auto')}
             />
             {!iconOnly && (
                 <span className="truncate text-base font-semibold uppercase text-foreground">
-                    {brand.app_name}
+                    {appName}
                 </span>
             )}
         </div>

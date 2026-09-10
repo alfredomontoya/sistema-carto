@@ -27,6 +27,10 @@ use Spatie\Permission\Traits\HasRoles;
     'avatar_kind',
     'avatar_value',
     'is_active',
+    'must_change_password',
+    'password_changed_at',
+    'recovery_email',
+    'recovery_email_verified_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -45,6 +49,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
+            'password_changed_at' => 'datetime',
+            'recovery_email_verified_at' => 'datetime',
         ];
     }
 

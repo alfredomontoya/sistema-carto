@@ -41,7 +41,15 @@ export default function Dashboard() {
         includeAnnulled: boolean;
     };
     const { auth, stats, selectedYear, availableYears, isAdmin } = props;
-    const { destinoStats, userStats, period, dateFrom, dateTo, periodYear, includeAnnulled } = props;
+    const {
+        destinoStats = [],
+        userStats = [],
+        period,
+        dateFrom,
+        dateTo,
+        periodYear,
+        includeAnnulled,
+    } = props;
     const flash = usePage().props.flash as FlashData | undefined;
     const celebrateCount = typeof flash?.celebrate === 'number' ? flash.celebrate : 0;
     const user = auth.user;

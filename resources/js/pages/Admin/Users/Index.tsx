@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Pencil, Search, UserPlus } from 'lucide-react';
 import * as React from 'react';
 import { useEffect } from 'react';
+import { useEffectOnUpdate } from '@/lib/use-effect-on-update';
 import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -41,7 +42,7 @@ export default function UsersIndex({
     const [role, setRole] = React.useState(filters.role ?? '');
     const [areaId, setAreaId] = React.useState(filters.area_id ?? '');
 
-    useEffect(() => {
+    useEffectOnUpdate(() => {
         const timeout = setTimeout(() => {
             router.get(
                 '/admin/users',
@@ -179,6 +180,11 @@ export default function UsersIndex({
                                             <Badge variant={u.is_active ? 'success' : 'destructive'}>
                                                 {u.is_active ? 'Activo' : 'Inactivo'}
                                             </Badge>
+                                            {u.must_change_password && (
+                                                <Badge variant="warning" className="ml-1">
+                                                    Debe cambiar clave
+                                                </Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="outline" size="sm" asChild>

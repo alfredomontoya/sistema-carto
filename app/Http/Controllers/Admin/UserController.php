@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AreaService;
+use App\Services\PasswordRecoveryService;
 use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class UserController extends Controller
     public function __construct(
         private readonly UserService $users,
         private readonly AreaService $areas,
+        private readonly PasswordRecoveryService $recovery,
     ) {}
 
     public function index(Request $request): Response
@@ -54,12 +56,16 @@ class UserController extends Controller
     {
         $user = $this->users->create(
             [
-                ...$request->safe()->except(['role_ids', 'position_id', 'password_confirmation', 'username']),
+                ...$request->safe()->except(['role_ids', 'position_id', 'password_confirmation', 'username', 'recovery_email']),
                 'email' => UserService::emailFor($request->string('username')->toString()),
             ],
             $request->validated('role_ids') ?? [],
             $request->validated('position_id'),
         );
+
+        if ($request->has('recovery_email')) {
+            $this->recovery->setRecoveryEmail($user, $request->input('recovery_email'));
+        }
 
         return redirect()
             ->route('admin.users.edit', $user->id)
@@ -80,6 +86,8 @@ class UserController extends Controller
             'user' => UserResource::make($user)->resolve(),
             'roles' => $this->users->availableRoles()->toArray(),
             'areas' => $this->areas->tree(),
+            'password_days_left' => $this->users->passwordDaysLeft($user),
+            'password_expiry_days' => $this->users->passwordExpiryDays(),
             'position_history' => $user->assignmentHistory->map(
                 fn ($assignment) => [
                     'id' => $assignment->id,
@@ -101,9 +109,13 @@ class UserController extends Controller
         }
 
         $this->users->updateProfile($user, [
-            ...$request->safe()->except(['role_ids', 'position_id', 'username']),
+            ...$request->safe()->except(['role_ids', 'position_id', 'username', 'recovery_email']),
             'email' => UserService::emailFor($request->string('username')->toString()),
         ]);
+
+        if ($request->has('recovery_email')) {
+            $this->recovery->setRecoveryEmail($user, $request->input('recovery_email'));
+        }
 
         if ($request->has('role_ids')) {
             $this->users->syncRoles($user, $request->validated('role_ids'));

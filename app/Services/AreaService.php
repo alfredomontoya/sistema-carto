@@ -36,6 +36,21 @@ class AreaService
     }
 
     /**
+     * Default area used when a communication has no registered
+     * destination area. Created on demand if missing.
+     */
+    public function defaultArea(): Area
+    {
+        return $this->areas->findByCode('otro')
+            ?? $this->areas->create([
+                'code' => 'otro',
+                'name' => 'OTRO',
+                'parent_id' => null,
+                'is_active' => true,
+            ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Area

@@ -1,5 +1,12 @@
 import GuestLayout from '@/layouts/GuestLayout';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Info } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -7,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
 import { FormEventHandler } from 'react';
 
-export default function Login({ status }: { status?: string }) {
+export default function Login({ status, canResetPassword }: { status?: string; canResetPassword?: boolean }) {
     const userDomain = usePage().props.app.user_domain;
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -82,11 +89,31 @@ export default function Login({ status }: { status?: string }) {
                         onCheckedChange={(checked) => setData('remember', checked === true)}
                     />
                     Recordarme
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 cursor-help" aria-label="Qué es Recordarme" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                Mantiene tu sesión iniciada en este equipo por más tiempo, para
+                                no pedir tu contraseña en cada visita. No lo uses en equipos
+                                compartidos.
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </label>
 
                 <Button type="submit" className="w-full" disabled={processing}>
                     {processing ? 'Ingresando…' : 'Ingresar'}
                 </Button>
+
+                {canResetPassword && errors.username && (
+                    <p className="text-center text-sm text-muted-foreground">
+                        <Link href="/recuperar" className="underline hover:text-foreground">
+                            ¿Olvidaste tu contraseña?
+                        </Link>
+                    </p>
+                )}
             </form>
         </GuestLayout>
     );

@@ -31,7 +31,7 @@ El registro público y la recuperación de contraseña no existen; solo el admin
   - **Referencia**: texto libre.
   - **Remitente**: nombre y puesto del usuario logueado (no editable).
   - **Destinatario**: nombre y puesto, ambos obligatorios (buscador de usuarios internos + texto libre).
-  - **Área destino**: nombre de área registrada (buscador) o texto libre; obligatoria en comunicaciones internas, opcional en oficios.
+  - **Área destino**: opcional; nombre de área registrada (buscador) o texto libre, puede quedar vacía.
   - **Adjunto**: opcional, PDF, Word o imagen.
 - Cada comunicación recibe un número correlativo por área, tipo (ci/of) y año con formato `prefijo.codigo_area.secuencia/año` (ejemplo `ci.carto.0001/2026`).
 - El correlativo no se reutiliza aunque se anule una comunicación.

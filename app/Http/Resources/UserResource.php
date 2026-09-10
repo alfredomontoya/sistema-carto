@@ -30,6 +30,9 @@ class UserResource extends JsonResource
                 ? asset('storage/avatars/'.$this->avatar_value)
                 : null,
             'is_active' => $this->is_active,
+            'must_change_password' => (bool) $this->must_change_password,
+            'recovery_email' => $this->recovery_email,
+            'recovery_email_verified' => $this->recovery_email_verified_at !== null,
             'created_at' => $this->created_at?->toIso8601String(),
             'roles' => $roles->pluck('name'),
             'role_ids' => $roles->pluck('id'),

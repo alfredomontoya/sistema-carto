@@ -27,11 +27,15 @@ export default function Edit({
     roles,
     areas,
     position_history,
+    password_days_left,
+    password_expiry_days,
 }: {
     user: UserData;
     roles: RoleData[];
     areas: AreaNode[];
     position_history: PositionHistoryEntry[];
+    password_days_left: number;
+    password_expiry_days: number;
 }) {
     const userDomain = usePage().props.app.user_domain;
 
@@ -88,7 +92,14 @@ export default function Edit({
                         <CardTitle>Editar usuario</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <UserForm user={user} roles={roles} areas={areas} mode="edit" />
+                        <UserForm
+                            user={user}
+                            roles={roles}
+                            areas={areas}
+                            mode="edit"
+                            password_days_left={password_days_left}
+                            password_expiry_days={password_expiry_days}
+                        />
                     </CardContent>
                 </Card>
 

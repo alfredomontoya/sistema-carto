@@ -56,10 +56,11 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user ? UserResource::make($user)->resolve() : null,
             ],
-            'brand' => Inertia::lazy(fn () => $brand->withUrls()),
+            'brand' => $brand->withUrls(),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
+                'warning' => $request->session()->get('warning'),
                 'celebrate' => $request->session()->get('celebrate'),
             ],
             'created' => $request->session()->get('created'),

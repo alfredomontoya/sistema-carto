@@ -21,11 +21,15 @@ export function UserForm({
     roles,
     areas,
     mode,
+    password_days_left,
+    password_expiry_days,
 }: {
     user?: UserData;
     roles: RoleData[];
     areas: AreaNode[];
     mode: 'create' | 'edit';
+    password_days_left?: number;
+    password_expiry_days?: number;
 }) {
     const isEdit = mode === 'edit';
     const userDomain = usePage().props.app.user_domain;
@@ -35,9 +39,11 @@ export function UserForm({
         username: user?.username ?? '',
         phone: user?.phone ?? '',
         address: user?.address ?? '',
+        recovery_email: user?.recovery_email ?? '',
         password: '',
         password_confirmation: '',
         is_active: user?.is_active ?? true,
+        must_change_password: user?.must_change_password ?? true,
         role_ids: user?.role_ids ?? [],
         position_id: user?.current_position?.id ?? '',
     });
@@ -107,6 +113,25 @@ export function UserForm({
                         onChange={(e) => setData('address', e.target.value)}
                     />
                     {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="recovery-email">Correo para recuperación</Label>
+                    <Input
+                        id="recovery-email"
+                        type="email"
+                        value={data.recovery_email}
+                        onChange={(e) => setData('recovery_email', e.target.value)}
+                        placeholder="tucorreo@ejemplo.com"
+                    />
+                    {isEdit && user?.recovery_email && (
+                        <p className="text-xs text-muted-foreground">
+                            {user.recovery_email_verified ? 'Verificado.' : 'Pendiente de verificación: se enviará un enlace al guardar.'}
+                        </p>
+                    )}
+                    {errors.recovery_email && (
+                        <p className="text-sm text-destructive">{errors.recovery_email}</p>
+                    )}
                 </div>
 
                 {!isEdit && (
@@ -189,6 +214,37 @@ export function UserForm({
                     />
                 </div>
             )}
+
+            <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                    <p className="font-medium">Obligar cambio de contraseña</p>
+                    <p className="text-sm text-muted-foreground">
+                        El usuario deberá actualizar su contraseña antes de usar el sistema.
+                        {typeof password_days_left === 'number' && (
+                            <>
+                                {' '}
+                                {password_days_left <= 0 ? (
+                                    <span className="font-medium text-destructive">
+                                        Contraseña vencida.
+                                    </span>
+                                ) : (
+                                    <span>
+                                        Le quedan {password_days_left}{' '}
+                                        {password_days_left === 1 ? 'día' : 'días'}
+                                        {typeof password_expiry_days === 'number' &&
+                                            ` de ${password_expiry_days}`}
+                                        .
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </p>
+                </div>
+                <Switch
+                    checked={data.must_change_password as boolean}
+                    onCheckedChange={(v) => setData('must_change_password', v)}
+                />
+            </div>
 
             <div className="flex items-center gap-3">
                 <Button type="submit" disabled={processing}>

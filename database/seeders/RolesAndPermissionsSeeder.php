@@ -26,6 +26,9 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
         $admin->syncPermissions($permissions);
 
+        $jefe = Role::findOrCreate('jefe', 'web');
+        $jefe->syncPermissions(['manage users', 'manage areas']);
+
         Role::findOrCreate('usuario', 'web');
     }
 }

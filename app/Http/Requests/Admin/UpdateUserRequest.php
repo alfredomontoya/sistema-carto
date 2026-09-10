@@ -19,6 +19,7 @@ class UpdateUserRequest extends FormRequest
             'username' => $this->sanitizeUsername($this->input('username')),
             'phone' => $this->sanitizePhone($this->input('phone')),
             'address' => $this->sanitizeText($this->input('address')),
+            'recovery_email' => $this->sanitizeUsername($this->input('recovery_email')),
         ]);
     }
 
@@ -45,7 +46,14 @@ class UpdateUserRequest extends FormRequest
             ],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:255'],
+            'recovery_email' => [
+                'nullable',
+                'email',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users', 'recovery_email')->ignore($this->route('user')),
+            ],
             'is_active' => ['boolean'],
+            'must_change_password' => ['boolean'],
             'role_ids' => ['nullable', 'array'],
             'role_ids.*' => ['integer', 'exists:roles,id'],
             'position_id' => ['nullable', 'uuid', 'exists:positions,id'],

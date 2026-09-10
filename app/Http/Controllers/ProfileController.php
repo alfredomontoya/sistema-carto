@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\PasswordRecoveryService;
 use App\Services\UserService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,6 +20,7 @@ class ProfileController extends Controller
 {
     public function __construct(
         private readonly UserService $users,
+        private readonly PasswordRecoveryService $recovery,
     ) {}
 
     /**
@@ -30,6 +34,8 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
             'avatar_gallery' => config('avatars.gallery'),
+            'password_days_left' => $this->users->passwordDaysLeft($request->user()),
+            'password_expiry_days' => $this->users->passwordExpiryDays(),
         ]);
     }
 
@@ -38,17 +44,12 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        if (array_key_exists('username', $data)) {
-            $data['email'] = UserService::emailFor($data['username']);
-            unset($data['username']);
-        }
+        $data = $request->safe()->except(['recovery_email']);
 
         $this->users->updateProfile($request->user(), $data);
 
-        if ($request->user()->wasChanged('email')) {
-            $request->user()->forceFill(['email_verified_at' => null])->save();
+        if ($request->has('recovery_email')) {
+            $this->recovery->setRecoveryEmail($request->user(), $request->input('recovery_email'));
         }
 
         return Redirect::route('profile.edit');
@@ -64,9 +65,15 @@ class ProfileController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $this->users->updatePassword($request->user(), $request->input('password'));
+        if (Hash::check($request->input('password'), $request->user()->password)) {
+            return Redirect::route('profile.edit', ['tab' => 'password'])
+                ->withErrors(['password' => 'La nueva contraseña debe ser diferente a la actual.']);
+        }
 
-        return Redirect::route('profile.edit');
+        $this->users->updatePassword($request->user(), $request->input('password'));
+        $this->users->setMustChangePassword($request->user(), false);
+
+        return Redirect::route('profile.edit')->with('success', 'Contraseña actualizada correctamente.');
     }
 
     /**
@@ -86,7 +93,7 @@ class ProfileController extends Controller
                 ->delete('avatars/'.$user->avatar_value);
         }
 
-        $filename = $user->id.'.'.$file->getClientOriginalExtension();
+        $filename = $user->id.'_'.time().'_'.Str::random(6).'.'.strtolower($file->getClientOriginalExtension());
         $file->storeAs('avatars', $filename, 'public');
 
         $this->users->updateProfile($user, [

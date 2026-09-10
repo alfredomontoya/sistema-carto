@@ -1,4 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
+import { TriangleAlert } from 'lucide-react';
+import * as React from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,8 +10,24 @@ import UpdatePasswordForm from '@/pages/Profile/Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from '@/pages/Profile/Partials/UpdateProfileInformationForm';
 import type { AvatarGalleryEntry } from '@/components/AvatarPicker';
 
-export default function Edit({ avatar_gallery }: { avatar_gallery: AvatarGalleryEntry }) {
+const VALID_TABS = ['info', 'avatar', 'password'] as const;
+
+function initialTab(): string {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    return (VALID_TABS as readonly string[]).includes(tab ?? '') ? tab as string : 'info';
+}
+
+export default function Edit({
+    avatar_gallery,
+    password_days_left,
+    password_expiry_days,
+}: {
+    avatar_gallery: AvatarGalleryEntry;
+    password_days_left: number;
+    password_expiry_days: number;
+}) {
     const user = usePage().props.auth.user!;
+    const [tab, setTab] = React.useState(initialTab);
 
     return (
         <AppLayout>
@@ -24,7 +42,18 @@ export default function Edit({ avatar_gallery }: { avatar_gallery: AvatarGallery
                     </p>
                 </div>
 
-                <Tabs defaultValue="info">
+                {user.must_change_password && (
+                    <Card className="border-warning/50 bg-warning/10">
+                        <CardContent className="flex items-center gap-3 p-4">
+                            <TriangleAlert className="h-5 w-5 shrink-0 text-warning" />
+                            <p className="text-sm font-medium">
+                                Debes actualizar tu contraseña para continuar usando el sistema.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <Tabs value={tab} onValueChange={setTab}>
                     <TabsList>
                         <TabsTrigger value="info">Información</TabsTrigger>
                         <TabsTrigger value="avatar">Avatar</TabsTrigger>
@@ -35,12 +64,15 @@ export default function Edit({ avatar_gallery }: { avatar_gallery: AvatarGallery
                         <Card>
                             <CardHeader>
                                 <CardTitle>Información personal</CardTitle>
-                                <CardDescription>
-                                    Actualiza tu nombre, usuario, teléfono y dirección.
-                                </CardDescription>
+                            <CardDescription>
+                                Actualiza tu teléfono y dirección.
+                            </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <UpdateProfileInformationForm />
+                                <UpdateProfileInformationForm
+                                    password_days_left={password_days_left}
+                                    password_expiry_days={password_expiry_days}
+                                />
                             </CardContent>
                         </Card>
                     </TabsContent>
