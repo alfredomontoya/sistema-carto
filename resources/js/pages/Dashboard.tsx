@@ -7,8 +7,7 @@ import { memo } from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
 import { CelebrateConfetti } from '@/components/CelebrateConfetti';
 import { LazySection } from '@/components/LazySection';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartDataTable, DestinoBarChart } from '@/components/charts';
+import { ChartDataTable, ChartCard, DestinoBarChart } from '@/components/charts';
 import type { DestinoStat } from '@/components/charts';
 import { ActividadSection } from '@/components/dashboard/ActividadSection';
 import { PeriodFilters } from '@/components/dashboard/PeriodFilters';
@@ -137,91 +136,55 @@ export default function Dashboard() {
 
                         <LazySection>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                                        Comunicaciones por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={destinoStats} type="ci" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                        Oficios por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={destinoStats} type="of" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                                        Total por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={destinoStats} type="total" />
-                                </CardContent>
-                            </Card>
+                            <ChartCard
+                                icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
+                                title="Comunicaciones por destino"
+                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
+                                fileName="comunicaciones-por-destino"
+                            >
+                                <MemoDestinoBarChart data={destinoStats} type="ci" />
+                            </ChartCard>
+                            <ChartCard
+                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+                                title="Oficios por destino"
+                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
+                                fileName="oficios-por-destino"
+                            >
+                                <MemoDestinoBarChart data={destinoStats} type="of" />
+                            </ChartCard>
+                            <ChartCard
+                                icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
+                                title="Total por destino"
+                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                fileName="total-por-destino"
+                            >
+                                <MemoDestinoBarChart data={destinoStats} type="total" />
+                            </ChartCard>
                         </div>
                         </LazySection>
 
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: comunicaciones por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={destinoStats} valueKey="ci" labelHeader="Destino" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: oficios por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={destinoStats} valueKey="of" labelHeader="Destino" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: total por destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={destinoStats} valueKey="total" labelHeader="Destino" />
-                                </CardContent>
-                            </Card>
+                            <ChartCard
+                                title="Detalle: comunicaciones por destino"
+                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
+                                fileName="detalle-comunicaciones-por-destino"
+                            >
+                                <ChartDataTable data={destinoStats} valueKey="ci" labelHeader="Destino" />
+                            </ChartCard>
+                            <ChartCard
+                                title="Detalle: oficios por destino"
+                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
+                                fileName="detalle-oficios-por-destino"
+                            >
+                                <ChartDataTable data={destinoStats} valueKey="of" labelHeader="Destino" />
+                            </ChartCard>
+                            <ChartCard
+                                title="Detalle: total por destino"
+                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                fileName="detalle-total-por-destino"
+                            >
+                                <ChartDataTable data={destinoStats} valueKey="total" labelHeader="Destino" />
+                            </ChartCard>
                         </div>
                     </div>
                 )}
@@ -233,91 +196,55 @@ export default function Dashboard() {
 
                         <LazySection>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                                        Comunicaciones por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={userStats} type="ci" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                        Oficios por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={userStats} type="of" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                        Total por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <MemoDestinoBarChart data={userStats} type="total" />
-                                </CardContent>
-                            </Card>
+                            <ChartCard
+                                icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
+                                title="Comunicaciones por usuario"
+                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
+                                fileName="comunicaciones-por-usuario"
+                            >
+                                <MemoDestinoBarChart data={userStats} type="ci" />
+                            </ChartCard>
+                            <ChartCard
+                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+                                title="Oficios por usuario"
+                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
+                                fileName="oficios-por-usuario"
+                            >
+                                <MemoDestinoBarChart data={userStats} type="of" />
+                            </ChartCard>
+                            <ChartCard
+                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+                                title="Total por usuario"
+                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                fileName="total-por-usuario"
+                            >
+                                <MemoDestinoBarChart data={userStats} type="total" />
+                            </ChartCard>
                         </div>
                         </LazySection>
 
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: comunicaciones por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={userStats} valueKey="ci" labelHeader="Usuario" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: oficios por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={userStats} valueKey="of" labelHeader="Usuario" />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">
-                                        Detalle: total por usuario
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {rangeLabel} · Total: {ciTotal + ofTotal} · {scopeLabel}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ChartDataTable data={userStats} valueKey="total" labelHeader="Usuario" />
-                                </CardContent>
-                            </Card>
+                            <ChartCard
+                                title="Detalle: comunicaciones por usuario"
+                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
+                                fileName="detalle-comunicaciones-por-usuario"
+                            >
+                                <ChartDataTable data={userStats} valueKey="ci" labelHeader="Usuario" />
+                            </ChartCard>
+                            <ChartCard
+                                title="Detalle: oficios por usuario"
+                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
+                                fileName="detalle-oficios-por-usuario"
+                            >
+                                <ChartDataTable data={userStats} valueKey="of" labelHeader="Usuario" />
+                            </ChartCard>
+                            <ChartCard
+                                title="Detalle: total por usuario"
+                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                fileName="detalle-total-por-usuario"
+                            >
+                                <ChartDataTable data={userStats} valueKey="total" labelHeader="Usuario" />
+                            </ChartCard>
                         </div>
                     </div>
 

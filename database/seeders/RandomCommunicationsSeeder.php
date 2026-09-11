@@ -14,10 +14,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Generate random internal (ci) and external (of) communications across all
- * areas, following the real numbering flow through CommunicationService.
+ * Genera 50 comunicaciones internas (ci) y oficios externos (of) aleatorios
+ * en todas las áreas, siguiendo el flujo real de numeración.
  *
- * Run with: php artisan db:seed --class=RandomCommunicationsSeeder
+ * Ejecutar con: php artisan db:seed --class=RandomCommunicationsSeeder
+ *
+ * NOTA: las fechas arrancan fijas el 01/01/2026 y avanzan +8h por registro,
+ * así que solo cubren ~16 días (enero). Para datos repartidos hasta hoy,
+ * usar DemoCommunicationsSeeder.
  */
 class RandomCommunicationsSeeder extends Seeder
 {
@@ -41,28 +45,35 @@ class RandomCommunicationsSeeder extends Seeder
 
     public function run(): void
     {
+        // Pool de creadores/destinatarios: un usuario demo por área y puesto.
         $users = $this->ensureDemoUsers();
 
         $summary = ['ci' => 0, 'of' => 0, 'anuladas' => 0];
         $byArea = [];
+
+        // Fecha base fija: cada registro suma +8h, cubriendo ~16 días.
         $createdAt = Carbon::create(2026, 1, 1, 0, 0, 0);
 
-        // Pre-load all areas and their numbering areas
+        // Precarga de áreas con su área de numeración (un solo nivel).
         $areas = Area::with('positions')->get()->keyBy('id');
         $numberingAreas = $this->resolveNumberingAreas($areas);
-        
-        // Pre-calculate sequences for each numbering_area/type/year
+
+        // Secuencias en memoria por área de numeración y tipo, continuando
+        // desde el contador persistido para no pisar numeración existente.
         $sequences = [];
         $year = 2026;
 
         for ($i = 0; $i < self::COUNT; $i++) {
+            // Creador al azar y tipo de documento (70% internas).
             $user = $users->random();
             $type = fake()->boolean(70) ? Communication::TYPE_INTERNAL : Communication::TYPE_EXTERNAL;
 
+            // Área real del creador y su área de numeración.
             $user->loadMissing('currentAssignment.position.area');
             $area = $user->currentArea;
             $numberingArea = $numberingAreas[$area->id] ?? $area;
-            
+
+            // Siguiente número del correlativo: prefijo.tipo.codigo.secuencia/año.
             $key = $numberingArea->id . '_' . $type . '_' . $year;
             if (!isset($sequences[$key])) {
                 $sequences[$key] = (int) AreaNumberCounter::where('area_id', $numberingArea->id)
@@ -87,7 +98,8 @@ class RandomCommunicationsSeeder extends Seeder
             $payload['status'] = Communication::STATUS_ACTIVE;
 
             $communication = Communication::create($payload);
-            
+
+            // Antedata created_at (updated_at queda en "ahora") y avanza +8h.
             $communication->update([
                 'created_at' => $createdAt->copy(),
             ]);
@@ -96,6 +108,7 @@ class RandomCommunicationsSeeder extends Seeder
             $areaCodeReal = $communication->area?->code ?? 'sin-area';
             $byArea[$areaCodeReal] = ($byArea[$areaCodeReal] ?? 0) + 1;
 
+            // 12% de anuladas (conservan su número, nunca se reutiliza).
             if (fake()->boolean(12)) {
                 $communication->update(['status' => Communication::STATUS_ANNULLED]);
                 $summary['anuladas']++;
@@ -104,7 +117,7 @@ class RandomCommunicationsSeeder extends Seeder
             $summary[$type]++;
         }
 
-        // Update counters in bulk
+        // Sincroniza los contadores persistidos con lo generado.
         foreach ($sequences as $key => $sequence) {
             [$areaId, $type, $yearStr] = explode('_', $key);
             AreaNumberCounter::updateOrCreate(
@@ -134,6 +147,9 @@ class RandomCommunicationsSeeder extends Seeder
     }
 
     /**
+     * Arma los datos del destinatario: interno (usuario del pool, 60%) o
+     * externo libre con nombre inventado.
+     *
      * @param  Collection<int, User>  $users
      * @return array<string, mixed>
      */
@@ -161,6 +177,14 @@ class RandomCommunicationsSeeder extends Seeder
     }
 
     /**
+     * Garantiza un usuario demo por cada área y puesto (demo-{area}-{puesto}).
+     *
+     * Crea los faltantes con firstOrCreate (contraseña 'password', rol
+     * usuario, avatar de galería) y les asigna su puesto; los ya existentes
+     * se reutilizan. Antes elimina los demo antiguos de formato "uno por
+     * área" (demo-{area}). Devuelve la colección que el run() usa como
+     * creadores y destinatarios de las comunicaciones.
+     *
      * @return Collection<int, User>
      */
     private function ensureDemoUsers(): Collection
@@ -197,8 +221,9 @@ class RandomCommunicationsSeeder extends Seeder
     }
 
     /**
-     * Remove legacy "one user per area" demo users (demo-{code}@example.com).
-     * Their position assignments and communications cascade-delete.
+     * Elimina los usuarios demo legacy de formato "uno por área"
+     * (demo-{codigo}@example.com). Sus asignaciones y comunicaciones
+     * se borran en cascada.
      */
     private function removeLegacyDemoUsers(Area $area): void
     {

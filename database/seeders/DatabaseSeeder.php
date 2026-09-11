@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             AreaSeeder::class,
             PositionSeeder::class,
             AdminUserSeeder::class,
+            TestUsersSeeder::class,
             DemoCommunicationsSeeder::class,
         ]);
     }

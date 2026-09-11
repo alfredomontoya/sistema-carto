@@ -76,13 +76,25 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * Normalize a date range to full days so the end date is inclusive
+     * up to 23:59:59. Accepts Y-m-d strings or Carbon instances.
+     *
+     * @return array{Carbon, Carbon}
+     */
+    private function dayRange(mixed $from, mixed $to): array
+    {
+        return [Carbon::parse($from)->startOfDay(), Carbon::parse($to)->endOfDay()];
+    }
+
+    /**
      * @param  Builder<Communication>  $query
      */
     private function applyStatsScope(Builder $query, string $table, mixed $from, mixed $to, ?string $areaId, ?string $userId, bool $onlyActive): void
     {
         $prefix = $table === '' ? '' : "{$table}.";
 
-        $query->whereBetween("{$prefix}created_at", [$from, $to]);
+        [$start, $end] = $this->dayRange($from, $to);
+        $query->whereBetween("{$prefix}created_at", [$start, $end]);
 
         if ($onlyActive) {
             $query->where("{$prefix}status", Communication::STATUS_ACTIVE);
@@ -182,7 +194,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
         $this->applyStatsScope($query, 'communications', $from, $to, $areaId, $userId, ! $includeAnnulled);
 
         return $this->mapGroupedStats(
-            $query->groupBy('destino')->orderByDesc('total')->limit(15)->get(),
+            $query->groupBy('destino')->orderBy('destino')->limit(15)->get(),
             fn ($row) => $row->destino,
         );
     }
@@ -194,11 +206,12 @@ class EloquentCommunicationRepository implements CommunicationRepository
     private function getDestinoStatsForAreas(string $from, string $to, array $scopeAreaIds, bool $includeAnnulled): array
     {
         [$columns, $bindings] = $this->typeCountColumns('c');
+        [$start, $end] = $this->dayRange($from, $to);
 
         $query = Area::query()
-            ->leftJoin('communications as c', function ($join) use ($from, $to, $includeAnnulled): void {
+            ->leftJoin('communications as c', function ($join) use ($start, $end, $includeAnnulled): void {
                 $join->on('c.area_destino_id', '=', 'areas.id')
-                    ->whereBetween('c.created_at', [$from, $to]);
+                    ->whereBetween('c.created_at', [$start, $end]);
 
                 if (! $includeAnnulled) {
                     $join->where('c.status', Communication::STATUS_ACTIVE);
@@ -208,7 +221,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
             ->whereIn('areas.id', $scopeAreaIds);
 
         return $this->mapGroupedStats(
-            $query->groupBy('areas.id', 'areas.code')->orderByDesc('total')->limit(15)->get(),
+            $query->groupBy('areas.id', 'areas.code')->orderBy('areas.code')->limit(15)->get(),
             fn ($row) => $row->destino,
         );
     }

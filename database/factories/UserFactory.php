@@ -25,16 +25,22 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $username = fake()->unique()->userName();
+
         return [
             'name' => fake()->name(),
-            'email' => UserService::emailFor(fake()->unique()->userName()),
+            'email' => UserService::emailFor($username),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'phone' => fake()->optional()->numerify('9########'),
             'address' => fake()->optional()->address(),
             'avatar_kind' => 'gallery',
-            'avatar_value' => null,
+            'avatar_value' => fake()->optional()->randomElement(array_keys(config('avatars.gallery'))),
             'is_active' => true,
+            'must_change_password' => false,
+            'password_changed_at' => now(),
+            'recovery_email' => fake()->boolean(60) ? "recuperacion-{$username}@example.com" : null,
+            'recovery_email_verified_at' => null,
             'remember_token' => Str::random(10),
         ];
     }

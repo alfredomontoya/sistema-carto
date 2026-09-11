@@ -1,10 +1,10 @@
-import { BarChart2, TrendingUp } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Inbox, Send, TrendingUp } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { LazySection } from '@/components/LazySection';
-import { MonthlyStackedBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
+import { ChartCard, MonthlyBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
 import { memo } from 'react';
 
-const MemoMonthlyStackedBarChart = memo(MonthlyStackedBarChart);
+const MemoMonthlyBarChart = memo(MonthlyBarChart);
 const MemoYearlyLineChart = memo(YearlyLineChart);
 
 interface MonthStat {
@@ -45,7 +45,7 @@ export function ActividadSection({
             {!hasData ? (
                 <Card>
                     <CardContent className="py-12 text-center">
-                        <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                        <Inbox className="mx-auto h-12 w-12 text-muted-foreground/50" />
                         <p className="mt-4 text-muted-foreground">
                             {isAdmin
                                 ? 'No hay comunicaciones registradas para este año.'
@@ -55,29 +55,28 @@ export function ActividadSection({
                 </Card>
             ) : (
                 <LazySection>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                                    Mensual (barras apiladas)
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <MemoMonthlyStackedBarChart data={stats} year={selectedYear} />
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                    Tendencia anual
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <MemoYearlyLineChart data={stats} year={selectedYear} />
-                            </CardContent>
-                        </Card>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <ChartCard
+                            icon={<Inbox className="h-4 w-4 text-muted-foreground" />}
+                            title="Mensual comunicaciones"
+                            fileName={`mensual-comunicaciones-${selectedYear}`}
+                        >
+                            <MemoMonthlyBarChart data={stats} year={selectedYear} metric="ci" />
+                        </ChartCard>
+                        <ChartCard
+                            icon={<Send className="h-4 w-4 text-muted-foreground" />}
+                            title="Mensual oficios"
+                            fileName={`mensual-oficios-${selectedYear}`}
+                        >
+                            <MemoMonthlyBarChart data={stats} year={selectedYear} metric="of" />
+                        </ChartCard>
+                        <ChartCard
+                            icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+                            title="Tendencia anual"
+                            fileName={`tendencia-anual-${selectedYear}`}
+                        >
+                            <MemoYearlyLineChart data={stats} year={selectedYear} />
+                        </ChartCard>
                     </div>
                 </LazySection>
             )}
