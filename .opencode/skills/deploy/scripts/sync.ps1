@@ -24,13 +24,15 @@ $ErrorActionPreference = "Stop"
 $script:failed = 0
 $script:totalMs = 0
 
-function Step([string]$name, [scriptblock]$body) {
+function Step([string]$name, [scriptblock]$body, [ref]$out) {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $detail = & $body
+        if ($detail -is [array]) { $detail = ($detail | Out-String).Trim() }
         $sw.Stop()
         $script:totalMs += $sw.ElapsedMilliseconds
         Write-Output ("STEP|{0}|OK|{1}ms|{2}" -f $name, $sw.ElapsedMilliseconds, $detail)
+        if ($out) { $out.Value = $detail }
     } catch {
         $sw.Stop()
         $script:totalMs += $sw.ElapsedMilliseconds
@@ -63,11 +65,13 @@ try {
         "limpio"
     }
 
-    $wampPhp = Step "preflight-php" {
+    $wampPhp = ""
+    Step "preflight-php" {
         $p = Find-WampPhp
         $v = & $p -v | Select-Object -First 1
         "$p ($v)"
-    }
+    } ([ref]$wampPhp)
+    $wampPhp = ($wampPhp -split " \(")[0]
 
     Step "preflight-env" {
         $env = Join-Path $Target ".env"
@@ -84,7 +88,7 @@ try {
 
     if ($DryRun) {
         Write-Output "DRYRUN|preflight ok; acciones pendientes: backup, build, sync, migrate, caches, storage:link, smoke"
-        Write-Output ("SUMMARY|{0}|{1}|{2}" -f (5 - $script:failed), $script:failed, $script:totalMs)
+        Write-Output ("SUMMARY|ok|{0}|{1}" -f $script:failed, $script:totalMs)
         exit 0
     }
 
