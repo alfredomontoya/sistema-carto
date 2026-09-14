@@ -14,7 +14,7 @@
 param(
     [string]$Source = "D:\progra\carto",
     [string]$Target = "C:\wamp64\www\carto",
-    [string]$BaseUrl = "http://localhost",
+    [string]$BaseUrl = "http://localhost:8080",
     [switch]$DryRun,
     [switch]$SkipBuild,
     [switch]$NoMaintenance
@@ -87,19 +87,9 @@ try {
     }
 
     if ($DryRun) {
-        Write-Output "DRYRUN|preflight ok; acciones pendientes: backup, build, sync, migrate, caches, storage:link, smoke"
+        Write-Output "DRYRUN|preflight ok; acciones pendientes: build, sync, composer, down, backup, migrate, caches, storage:link, up, smoke"
         Write-Output ("SUMMARY|ok|{0}|{1}" -f $script:failed, $script:totalMs)
         exit 0
-    }
-
-    if (-not $NoMaintenance) {
-        Step "maintenance-down" { & $wampPhp (Join-Path $Target "artisan") down | Out-String }
-    }
-
-    Step "backup-bd" {
-        $out = & $wampPhp (Join-Path $Target "artisan") app:backup-database | Out-String
-        if ($LASTEXITCODE -ne 0) { throw $out }
-        ($out.Trim() -split "`n" | Select-Object -Last 1)
     }
 
     if (-not $SkipBuild) {
@@ -118,23 +108,39 @@ try {
     $hasComposer = $null -ne (Get-Command composer -ErrorAction SilentlyContinue)
     Step "sync-archivos" {
         $excludes = @(".git", "node_modules", "tests", ".env*", "public\hot", ".opencode\node_modules")
-        $logDir = Join-Path "storage" "logs"
-        $args = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $excludes + @("/XF", "*.log") + @("/XD", $logDir)
+        $keepDirs = @("storage\app\backups", "storage\app\public", "storage\framework", "storage\logs")
+        $args = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $excludes + $keepDirs + @("/XF", "*.log")
         if ($hasComposer) { $args += @("vendor") }
         & robocopy @args | Out-Null
         if ($LASTEXITCODE -gt 7) { throw "robocopy exit=$LASTEXITCODE" }
-        "mirror ok"
+        "mirror ok (storage de destino preservado)"
     }
 
     if ($hasComposer) {
         Step "composer-install" {
             Push-Location $Target
             try {
-                composer install --no-dev --optimize-autoloader --no-interaction 2>&1 | Select-Object -Last 2 | Out-String
+                $attempt = 0
+                do {
+                    $attempt += 1
+                    composer install --no-dev --optimize-autoloader --no-interaction 2>&1 | Select-Object -Last 2 | Out-String
+                } while ($LASTEXITCODE -ne 0 -and $attempt -lt 3)
+                if ($LASTEXITCODE -ne 0) { throw "composer fallo tras $attempt intentos" }
+                "vendor ok (intento $attempt)"
             } finally { Pop-Location }
         }
     } else {
         Write-Output "STEP|composer-install|SKIP|0ms|sin composer: vendor sincronizado"
+    }
+
+    if (-not $NoMaintenance) {
+        Step "maintenance-down" { & $wampPhp (Join-Path $Target "artisan") down | Out-String }
+    }
+
+    Step "backup-bd" {
+        $out = & $wampPhp (Join-Path $Target "artisan") app:backup-database | Out-String
+        if ($LASTEXITCODE -ne 0) { throw $out }
+        ($out.Trim() -split "`n" | Select-Object -Last 1)
     }
 
     Step "migrate" {
@@ -156,6 +162,10 @@ try {
         ($out.Trim() -split "`n" | Select-Object -Last 1)
     }
 
+    if (-not $NoMaintenance) {
+        Step "maintenance-up" { & $wampPhp (Join-Path $Target "artisan") up | Out-String }
+    }
+
     Step "smoke" {
         foreach ($path in @("/up", "/login")) {
             $r = Invoke-WebRequest -Uri ($BaseUrl.TrimEnd("/") + $path) -UseBasicParsing -TimeoutSec 30
@@ -164,11 +174,7 @@ try {
         "/up y /login 200"
     }
 
-    if (-not $NoMaintenance) {
-        Step "maintenance-up" { & $wampPhp (Join-Path $Target "artisan") up | Out-String }
-    }
-
-    Write-Output ("SUMMARY|{0}|{1}|{2}" -f "done", $script:failed, $script:totalMs)
+    Write-Output ("SUMMARY|done|{0}|{1}" -f $script:failed, $script:totalMs)
     exit $script:failed
 } catch {
     Write-Output ("SUMMARY|aborted|{0}|{1}" -f $script:failed, $script:totalMs)

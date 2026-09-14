@@ -30,14 +30,14 @@ Comando `/deploy` (ver `.opencode/command/deploy.md`). Flags:
 
 1. **Respaldo BD en destino**: `php artisan app:backup-database`. No negociable antes de migrar.
 2. **Build en origen** (una sola vez): `npm ci && npm run build`. Al destino viajan artefactos.
-3. **Sync con robocopy `/MIR`** origen → destino, excluyendo: `.git/`, `node_modules/`, `tests/`, `.env*`, `storage/logs/*`, `public/hot`, `.opencode/node_modules/`.
-4. **Vendor**: si el destino tiene composer, `composer install --no-dev --optimize-autoloader` allá; si no, se sincroniza `vendor/` desde origen.
-5. **Mantenimiento** (salvo `--no-maintenance`): `php artisan down` antes de migrar.
-6. **Migraciones**: `php artisan migrate --force`. **Prohibido `migrate:fresh`, `migrate:reset` y cualquier `db:seed` completo en producción** (crearían 500 comunicaciones demo y 25 usuarios con clave `password`). Solo seeders puntuales si se piden explícito (`RolesAndPermissionsSeeder`, `AdminUserSeeder` con `ADMIN_PASSWORD` seguro).
+3. **Sync con robocopy `/MIR`** origen → destino, excluyendo: `.git/`, `node_modules/`, `tests/`, `.env*`, `public/hot`, `.opencode/node_modules/` y —crítico— `storage/app/backups`, `storage/app/public` (uploads), `storage/framework` (sesiones/caché), `storage/logs`. El mirror borra en destino lo que no existe en origen; sin estas exclusiones se perderían respaldos, avatares y sesiones.
+4. **Vendor**: si el destino tiene composer, `composer install --no-dev --optimize-autoloader` allá con reintento ×3 (los bloqueos de archivos de Apache/antivirus en Windows hacen fallar el primer intento); si no, se sincroniza `vendor/` desde origen.
+5. **Mantenimiento** (salvo `--no-maintenance`): `php artisan down` **después** del sync (el mirror borraría el flag `storage/framework/down` si se hace antes).
+6. **Respaldo BD** (tras el sync, antes de migrar) + **Migraciones**: `php artisan migrate --force`. **Prohibido `migrate:fresh`, `migrate:reset` y cualquier `db:seed` completo en producción** (crearían 500 comunicaciones demo y 25 usuarios con clave `password`). Solo seeders puntuales si se piden explícito (`RolesAndPermissionsSeeder`, `AdminUserSeeder` con `ADMIN_PASSWORD` seguro).
 7. **Cachés**: `php artisan config:cache && php artisan route:cache && php artisan view:cache`.
 8. **Storage**: `php artisan storage:link` (idempotente; crea el enlace si falta).
-9. **Smoke test**: `GET /up` → 200 y `GET /login` → 200 en el vhost de destino.
-10. **Levantar mantenimiento**: `php artisan up`.
+9. **Levantar mantenimiento**: `php artisan up`.
+10. **Smoke test** (después de `up`, pues `/login` da 503 en mantenimiento): `GET /up` → 200 y `GET /login` → 200. Base por defecto `http://localhost:8080` (vhost `splaadm23p-10:8080` → `www/carto/public`); override con `--target`/URL según el servidor.
 
 ## PowerShell (Windows)
 
