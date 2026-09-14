@@ -250,7 +250,7 @@ export default function CommunicationsIndex({
                                     <TableHead>Tipo</TableHead>
                                     <TableHead>Remitente</TableHead>
                                     <TableHead>Destinatario</TableHead>
-                                    <TableHead>Área</TableHead>
+                                    <TableHead>Área destino</TableHead>
                                     <TableHead>Fecha</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
@@ -299,7 +299,9 @@ export default function CommunicationsIndex({
                                                             </p>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="text-sm">{c.area?.name ?? '—'}</TableCell>
+                                                    <TableCell className="text-sm">
+                                                        {c.area_destino?.name ?? c.area_destino_nombre ?? '—'}
+                                                    </TableCell>
                                                     <TableCell className="whitespace-nowrap text-sm">
                                                         {formatDateTime(c.created_at)}
                                                     </TableCell>

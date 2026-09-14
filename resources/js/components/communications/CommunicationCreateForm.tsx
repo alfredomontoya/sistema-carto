@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { FileUp, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import { AreaDestinoInput } from '@/components/communications/AreaDestinoInput';
@@ -32,7 +32,6 @@ export function CommunicationCreateForm({
         recipient_user_id: '',
         area_destino_id: '',
         area_destino_nombre: '',
-        file: null as File | null,
     });
 
     const setType = (type: 'ci' | 'of') => setData('type', type);
@@ -157,33 +156,14 @@ export function CommunicationCreateForm({
                         </p>
                     )}
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <AreaDestinoInput
-                            value={data.area_destino_nombre}
-                            areaId={data.area_destino_id}
-                            onChange={(name, areaId) => {
-                                setData('area_destino_nombre', name);
-                                setData('area_destino_id', areaId ?? '');
-                            }}
-                        />
-                        <details className="space-y-2 rounded-lg border p-3">
-                            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium">
-                                <FileUp className="h-4 w-4 text-muted-foreground" />
-                                Adjunto
-                                <span className="font-normal text-muted-foreground">
-                                    (opcional{data.file ? `: ${data.file.name}` : ''})
-                                </span>
-                            </summary>
-                            <Input
-                                type="file"
-                                accept=".pdf,.doc,.docx,image/jpeg,image/png,image/gif,image/webp"
-                                onChange={(e) => setData('file', e.target.files?.[0] ?? null)}
-                            />
-                            {errors.file && (
-                                <p className="text-sm text-destructive">{errors.file}</p>
-                            )}
-                        </details>
-                    </div>
+                    <AreaDestinoInput
+                        value={data.area_destino_nombre}
+                        areaId={data.area_destino_id}
+                        onChange={(name, areaId) => {
+                            setData('area_destino_nombre', name);
+                            setData('area_destino_id', areaId ?? '');
+                        }}
+                    />
                     {errors.area_destino_nombre && (
                         <p className="text-sm text-destructive">
                             {errors.area_destino_nombre}

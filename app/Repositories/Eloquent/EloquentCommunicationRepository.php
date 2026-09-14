@@ -22,7 +22,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         return Communication::query()
-            ->with(['area', 'position', 'user.currentAssignment.position.area', 'recipientUser.currentAssignment.position.area'])
+            ->with(['area', 'areaDestino', 'position', 'user.currentAssignment.position.area', 'recipientUser.currentAssignment.position.area'])
             ->filter($filters)
             ->orderByDesc('created_at')
             ->orderByDesc('sequence')
