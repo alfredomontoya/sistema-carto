@@ -87,7 +87,7 @@ try {
     }
 
     if ($DryRun) {
-        Write-Output "DRYRUN|preflight ok; acciones pendientes: build, sync, composer, down, backup, migrate, caches, storage:link, up, smoke"
+        Write-Output "DRYRUN|preflight ok; acciones pendientes: build, sync, clean-target, composer, down, backup, migrate, caches, storage:link, up, smoke"
         Write-Output ("SUMMARY|ok|{0}|{1}" -f $script:failed, $script:totalMs)
         exit 0
     }
@@ -107,13 +107,23 @@ try {
 
     $hasComposer = $null -ne (Get-Command composer -ErrorAction SilentlyContinue)
     Step "sync-archivos" {
-        $excludes = @(".git", "node_modules", "tests", ".env*", "public\hot", ".opencode\node_modules")
-        $keepDirs = @("storage\app\backups", "storage\app\public", "storage\framework", "storage\logs")
-        $args = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $excludes + $keepDirs + @("/XF", "*.log")
+        $dirExcludes = @(".git", "node_modules", "tests", ".opencode", "storage\app\backups", "storage\app\public", "storage\framework", "storage\logs")
+        $fileExcludes = @(".env*", "*.log", "*.md", "phpunit.xml", "vite.config.js", "tsconfig.json", ".phpunit.result.cache", "public\hot")
+        $args = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $dirExcludes + @("/XF") + $fileExcludes
         if ($hasComposer) { $args += @("vendor") }
         & robocopy @args | Out-Null
         if ($LASTEXITCODE -gt 7) { throw "robocopy exit=$LASTEXITCODE" }
         "mirror ok (storage de destino preservado)"
+    }
+
+    Step "clean-target" {
+        $hot = Join-Path $Target "public\hot"
+        if (Test-Path -LiteralPath $hot) {
+            Remove-Item -LiteralPath $hot -Force
+            "hot obsoleto eliminado"
+        } else {
+            "sin hot obsoleto"
+        }
     }
 
     if ($hasComposer) {
