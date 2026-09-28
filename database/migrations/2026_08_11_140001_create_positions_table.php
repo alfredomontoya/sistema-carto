@@ -22,6 +22,7 @@ return new class extends Migration
 
             $table->unique(['area_id', 'code']);
             $table->index(['area_id']);
+            $table->index('code', 'positions_code_idx');
         });
     }
 

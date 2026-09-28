@@ -40,6 +40,10 @@ return new class extends Migration
             $table->index(['created_at']);
             $table->index(['status', 'year', 'area_id', 'created_at'], 'comms_dashboard_area_idx');
             $table->index(['status', 'year', 'user_id', 'created_at'], 'comms_dashboard_user_idx');
+            $table->index('recipient_user_id', 'comms_recipient_user_idx');
+            $table->index(['status', 'area_id', 'created_at'], 'comms_status_area_created_idx');
+            $table->index(['status', 'user_id', 'created_at'], 'comms_status_user_created_idx');
+            $table->index(['area_id', 'year', 'type', 'sequence'], 'comms_area_year_type_seq_idx');
         });
     }
 

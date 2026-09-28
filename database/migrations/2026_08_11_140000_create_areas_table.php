@@ -26,6 +26,11 @@ return new class extends Migration
                 ->references('id')
                 ->on('areas')
                 ->nullOnDelete();
+
+            $table->index('parent_id', 'areas_parent_id_idx');
+            $table->index('numbering_area_id', 'areas_numbering_area_id_idx');
+            $table->index('is_active', 'areas_is_active_idx');
+            $table->index('name', 'areas_name_idx');
         });
     }
 

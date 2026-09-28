@@ -22,11 +22,24 @@ return new class extends Migration
             $table->string('avatar_kind', 20)->default('gallery');
             $table->string('avatar_value')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('must_change_password')->default(false);
+            $table->timestamp('password_changed_at')->nullable();
+            $table->string('recovery_email')->nullable()->unique();
+            $table->timestamp('recovery_email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index(['must_change_password'], 'users_must_change_password_idx');
+            $table->index('is_active', 'users_is_active_idx');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('password_recovery_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
@@ -49,6 +62,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('password_recovery_tokens');
         Schema::dropIfExists('sessions');
     }
 };
