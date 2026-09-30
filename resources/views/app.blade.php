@@ -3,6 +3,25 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="CARTOPO — Sistema de comunicaciones internas y oficios externos con numeración correlativa por área.">
+        <meta name="theme-color" content="#1d4ed8">
+        <link rel="canonical" href="{{ config('app.url') }}">
+
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name', 'CARTOPO') }}">
+        <meta property="og:title" content="{{ config('app.name', 'CARTOPO') }} — Sistema de comunicaciones">
+        <meta property="og:description" content="Gestión de comunicaciones internas (ci) y oficios externos (of) con numeración correlativa por área de trabajo.">
+        <meta property="og:url" content="{{ config('app.url') }}">
+        <meta property="og:locale" content="es_BO">
+        <meta property="og:image" content="{{ asset('android-chrome-512x512.png') }}">
+        <meta property="og:image:width" content="512">
+        <meta property="og:image:height" content="512">
+        <meta property="og:image:alt" content="{{ config('app.name', 'CARTOPO') }} — logo">
+
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="{{ config('app.name', 'CARTOPO') }} — Sistema de comunicaciones">
+        <meta name="twitter:description" content="Gestión de comunicaciones internas y oficios externos con numeración correlativa por área.">
+        <meta name="twitter:image" content="{{ asset('android-chrome-512x512.png') }}">
 
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
