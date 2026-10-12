@@ -19,6 +19,7 @@ class NumberingTest extends TestCase
 
         $user = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000008',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -51,6 +52,7 @@ class NumberingTest extends TestCase
 
         $user = User::create([
             'name' => 'User Test',
+            'ci' => '1000009',
             'email' => 'user-test@example.com',
             'password' => 'password',
             'is_active' => true,

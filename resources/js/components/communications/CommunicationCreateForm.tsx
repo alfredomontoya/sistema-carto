@@ -18,13 +18,15 @@ export function CommunicationCreateForm({
     current_area,
     year,
     onSuccess,
+    onDirtyChange,
 }: {
     counters: CountersData;
     current_area: string | null;
     year: number;
     onSuccess?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 }) {
-    const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors, isDirty } = useForm({
         type: 'ci' as 'ci' | 'of',
         reference: '',
         recipient_name: '',
@@ -35,6 +37,10 @@ export function CommunicationCreateForm({
     });
 
     const setType = (type: 'ci' | 'of') => setData('type', type);
+
+    React.useEffect(() => {
+        onDirtyChange?.(isDirty);
+    }, [isDirty, onDirtyChange]);
 
     const validateLocal = (): boolean => {
         clearErrors();

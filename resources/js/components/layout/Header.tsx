@@ -72,6 +72,16 @@ export function Header({ onOpenMobile }: { onOpenMobile: () => void }) {
                             <p className="text-xs text-muted-foreground">
                                 {user.username}@{userDomain}
                             </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                {user.current_position ? (
+                                    <>
+                                        {user.current_position.name}
+                                        {user.current_area ? ` · ${user.current_area.name}` : ''}
+                                    </>
+                                ) : (
+                                    'Sin puesto asignado'
+                                )}
+                            </p>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>

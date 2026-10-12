@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable([
+    'ci',
     'name',
     'email',
     'password',

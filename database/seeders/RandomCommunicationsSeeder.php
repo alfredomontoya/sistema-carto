@@ -203,6 +203,7 @@ class RandomCommunicationsSeeder extends Seeder
                     ['email' => UserService::emailFor("demo-{$area->code}-{$position->code}")],
                     [
                         'name' => "Demo {$area->name} - {$position->name}",
+                        'ci' => fake()->unique()->numerify('#######'),
                         'password' => $passwordHash,
                         'is_active' => true,
                         'avatar_kind' => 'gallery',

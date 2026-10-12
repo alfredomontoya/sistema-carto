@@ -105,7 +105,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 
 - Admin: `admin` / `password` (login por usuario; correo derivado `admin@carto.com` según `USER_DOMAIN`). Variables del seeder: `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 - Área semilla: CARTOGRAFIA (raíz).
-- Puestos semilla: JEFE, TECNICO, ABOGADO, SECRETARIA, ASISTENTE. Admin asignado al puesto JEFE.
+- Puestos semilla: JEFE, TECNICO, ABOGADO, SECRETARIA, ASISTENTE. SISTEMAS solo tiene JEFE, SOPORTE, SECRETARIA.
 
 ## Invariantes clave (checklist)
 

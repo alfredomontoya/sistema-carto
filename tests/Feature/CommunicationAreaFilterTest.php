@@ -105,6 +105,7 @@ class CommunicationAreaFilterTest extends TestCase
 
         $user = User::create([
             'name' => ucfirst(explode('@', $email)[0]),
+            'ci' => fake()->unique()->numerify('#######'),
             'email' => $email,
             'password' => 'password',
             'is_active' => true,

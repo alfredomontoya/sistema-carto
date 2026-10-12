@@ -35,6 +35,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $user = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000015',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -87,6 +88,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $author = User::create([
             'name' => 'Autor',
+            'ci' => '1000016',
             'email' => 'autor@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -95,6 +97,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $admin = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000015',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -155,6 +158,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $author = User::create([
             'name' => 'Autor',
+            'ci' => '1000016',
             'email' => 'autor@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -163,6 +167,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $other = User::create([
             'name' => 'Otro',
+            'ci' => '1000017',
             'email' => 'otro@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -215,6 +220,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $author = User::create([
             'name' => 'Autor',
+            'ci' => '1000016',
             'email' => 'autor@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -223,6 +229,7 @@ class CreatedCommunicationFlashTest extends TestCase
 
         $admin = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000015',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,

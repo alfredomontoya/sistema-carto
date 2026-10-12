@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 /**
  * Genera 500 comunicaciones internas (ci) y oficios externos (of) de ejemplo
- * con fechas repartidas del 01/01/2026 hasta hoy.
+ * con fechas repartidas de START_DATE hasta END_DATE (hoy si es null).
  *
  * Usa los usuarios ya existentes en la base de datos (TestUsersSeeder se
  * ejecuta antes) y no crea usuarios nuevos. Corre al final de DatabaseSeeder.
@@ -28,6 +28,10 @@ class DemoCommunicationsSeeder extends Seeder
     private const COUNT = 500;
 
     private const CHUNK_SIZE = 250;
+
+    private const START_DATE = '2026-10-01';
+
+    private const END_DATE = null;
 
     public function run(): void
     {
@@ -45,21 +49,28 @@ class DemoCommunicationsSeeder extends Seeder
             );
         }
 
-        // Reloj fijo para toda la corrida: evita cientos de llamadas a now()
-        // y deja fechas coherentes entre filas y contadores.
-        $now = now();
-        $start = Carbon::create(2026, 1, 1, 0, 0, 0);
-        $spanMinutes = (int) $start->diffInMinutes($now);
+        // Rango fijo para toda la corrida: fechas coherentes entre filas
+        // y contadores.
+        $start = Carbon::parse(self::START_DATE)->startOfDay();
+        $end = self::END_DATE !== null ? Carbon::parse(self::END_DATE)->endOfDay() : now();
+
+        if ($start->isAfter($end)) {
+            throw new \RuntimeException(
+                'DemoCommunicationsSeeder: START_DATE es posterior a la fecha final.'
+            );
+        }
+
+        $spanMinutes = (int) $start->diffInMinutes($end);
 
         // Mapa de áreas con su área de numeración (un solo nivel): el número
         // usa el código del área apuntada, pero area_id guarda el área real.
         $areas = Area::with('positions')->get()->keyBy('id');
         $numberingAreas = $this->resolveNumberingAreas($areas);
 
-        // Secuencias en memoria por área de numeración y tipo, continuando
-        // desde el contador persistido para no pisar numeración existente.
+        // Secuencias en memoria por área de numeración, tipo y año (el año
+        // deriva de cada fecha generada), continuando desde el contador
+        // persistido para no pisar numeración existente.
         $sequences = [];
-        $year = 2026;
 
         $summary = ['ci' => 0, 'of' => 0, 'anuladas' => 0];
         $byArea = [];
@@ -74,22 +85,26 @@ class DemoCommunicationsSeeder extends Seeder
             $area = $user->currentArea;
             $numberingArea = $numberingAreas[$area->id] ?? $area;
 
-            // Siguiente número del correlativo: prefijo.tipo.codigo.secuencia/año.
-            $sequences[$numberingArea->id][$type] ??= (int) AreaNumberCounter::where('area_id', $numberingArea->id)
-                ->where('type', $type)
-                ->where('year', $year)
-                ->value('last_sequence') ?? 0;
-            $sequence = ++$sequences[$numberingArea->id][$type];
-            $number = sprintf('%s.%s.%04d/%d', $type, strtolower($numberingArea->code), $sequence, $year);
-
             // Fecha simulada: reparte los registros proporcionalmente entre
-            // el 01/01 y hoy, con jitter de 0-30 min y tope en el presente.
+            // el inicio y el fin del rango, con jitter de 0-30 min y tope
+            // en la fecha final.
             $stampedAt = $start->copy()->addMinutes(
                 (int) ($i * $spanMinutes / self::COUNT) + fake()->numberBetween(0, 30)
             );
-            if ($stampedAt->isAfter($now)) {
-                $stampedAt = $now->copy();
+            if ($stampedAt->isAfter($end)) {
+                $stampedAt = $end->copy();
             }
+
+            // El año deriva de la fecha generada, no de una constante.
+            $year = $stampedAt->year;
+
+            // Siguiente número del correlativo: prefijo.tipo.codigo.secuencia/año.
+            $sequences[$numberingArea->id][$type][$year] ??= (int) AreaNumberCounter::where('area_id', $numberingArea->id)
+                ->where('type', $type)
+                ->where('year', $year)
+                ->value('last_sequence') ?? 0;
+            $sequence = ++$sequences[$numberingArea->id][$type][$year];
+            $number = sprintf('%s.%s.%04d/%d', $type, strtolower($numberingArea->code), $sequence, $year);
 
             // Estado final sorteado de una vez (12% anuladas) para no hacer
             // un UPDATE posterior por registro.
@@ -122,18 +137,20 @@ class DemoCommunicationsSeeder extends Seeder
         }
 
         // Escritura atómica en chunks: 2 inserts en vez de ~1000 queries.
-        DB::transaction(function () use ($rows, $sequences, $year) {
+        DB::transaction(function () use ($rows, $sequences) {
             foreach (array_chunk($rows, self::CHUNK_SIZE) as $chunk) {
                 Communication::insert($chunk);
             }
 
             // Sincroniza los contadores persistidos con lo generado.
             foreach ($sequences as $areaId => $byType) {
-                foreach ($byType as $type => $sequence) {
-                    AreaNumberCounter::updateOrCreate(
-                        ['area_id' => $areaId, 'type' => $type, 'year' => $year],
-                        ['last_sequence' => $sequence],
-                    );
+                foreach ($byType as $type => $byYear) {
+                    foreach ($byYear as $year => $sequence) {
+                        AreaNumberCounter::updateOrCreate(
+                            ['area_id' => $areaId, 'type' => $type, 'year' => $year],
+                            ['last_sequence' => $sequence],
+                        );
+                    }
                 }
             }
         });
@@ -141,7 +158,7 @@ class DemoCommunicationsSeeder extends Seeder
         $areasSummary = collect($byArea)->sort()->map(fn ($count, $code) => "{$code}: {$count}")->implode(', ');
 
         $this->command?->info(
-            'Se generaron '.self::COUNT." comunicaciones: {$summary['ci']} ci, {$summary['of']} of, {$summary['anuladas']} anuladas."
+            'Se generaron '.self::COUNT." comunicaciones del {$start->format('d/m/Y')} al {$end->format('d/m/Y')}: {$summary['ci']} ci, {$summary['of']} of, {$summary['anuladas']} anuladas."
         );
         $this->command?->info("Por área: {$areasSummary}");
     }

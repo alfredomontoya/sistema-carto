@@ -45,6 +45,7 @@ export interface RoleData {
 
 export interface UserData {
     id: string;
+    ci: string;
     name: string;
     email: string;
     username: string;
@@ -66,6 +67,7 @@ export interface UserData {
         manage_users: boolean;
         manage_areas: boolean;
         manage_settings: boolean;
+        manage_backups: boolean;
     };
 }
 

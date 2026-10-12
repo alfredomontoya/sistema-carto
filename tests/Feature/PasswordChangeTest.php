@@ -17,6 +17,7 @@ class PasswordChangeTest extends TestCase
 
         $user = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000004',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,
@@ -30,6 +31,7 @@ class PasswordChangeTest extends TestCase
     {
         $this->actingAs($this->admin())->post('/admin/users', [
             'name' => 'Nuevo Usuario',
+            'ci' => '1000007',
             'username' => 'nuevousuario',
             'password' => 'password',
             'password_confirmation' => 'password',
@@ -46,6 +48,7 @@ class PasswordChangeTest extends TestCase
 
         $user = User::create([
             'name' => 'Forzado',
+            'ci' => '1000005',
             'email' => 'forzado@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -70,6 +73,7 @@ class PasswordChangeTest extends TestCase
 
         $user = User::create([
             'name' => 'Forzado',
+            'ci' => '1000005',
             'email' => 'forzado@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -101,6 +105,7 @@ class PasswordChangeTest extends TestCase
 
         $user = User::create([
             'name' => 'Normal',
+            'ci' => '1000006',
             'email' => 'normal@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -116,6 +121,7 @@ class PasswordChangeTest extends TestCase
 
         $this->actingAs($admin)->put("/admin/users/{$user->id}", [
             'name' => 'Normal',
+            'ci' => '1000006',
             'username' => 'normal',
             'must_change_password' => false,
         ])->assertSessionHasNoErrors();

@@ -46,6 +46,7 @@ class DestinoScopeTest extends TestCase
 
         $user = User::create([
             'name' => $name,
+            'ci' => fake()->unique()->numerify('#######'),
             'email' => $username.'@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -89,6 +90,8 @@ class DestinoScopeTest extends TestCase
         $author = $this->makeUser('Autor', 'autor', 'usuario', $this->root);
         $this->makeComm($author, $this->child);
 
+        $admin->currentAssignment()->first()?->update(['ended_at' => now()]);
+
         $stats = app(CommunicationService::class)
             ->getDestinoStats($admin->fresh(), '2020-01-01', '2030-01-01');
 
@@ -99,6 +102,23 @@ class DestinoScopeTest extends TestCase
         $empty = collect($stats)->firstWhere('destino', 'ROOT');
         $this->assertNotNull($empty);
         $this->assertSame(0, $empty['total']);
+    }
+
+    public function test_admin_with_area_sees_own_area_destinos(): void
+    {
+        $this->setupTree();
+        $admin = $this->makeUser('Admin', 'adminx', 'administrador', $this->root);
+        $author = $this->makeUser('Autor', 'autor', 'usuario', $this->root);
+        $this->makeComm($author, $this->child);
+        $this->makeComm($author, $this->other);
+
+        $stats = app(CommunicationService::class)
+            ->getDestinoStats($admin->fresh(), '2020-01-01', '2030-01-01');
+
+        $codes = array_map('strtolower', array_column($stats, 'destino'));
+        $this->assertContains('child', $codes);
+        $this->assertContains('other', $codes);
+        $this->assertCount(2, $stats);
     }
 
     public function test_jefe_sees_only_own_subtree(): void

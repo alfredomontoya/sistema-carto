@@ -34,6 +34,7 @@ class CelebrateLoginTest extends TestCase
 
         $this->top = User::create([
             'name' => 'Top',
+            'ci' => '1000013',
             'email' => 'top@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -42,6 +43,7 @@ class CelebrateLoginTest extends TestCase
 
         $this->other = User::create([
             'name' => 'Other',
+            'ci' => '1000014',
             'email' => 'other@carto.com',
             'password' => 'password',
             'is_active' => true,

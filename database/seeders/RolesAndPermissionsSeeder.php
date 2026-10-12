@@ -16,7 +16,7 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $permissions = ['manage users', 'manage areas', 'manage settings'];
+        $permissions = ['manage users', 'manage areas', 'manage settings', 'manage backups'];
 
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');

@@ -30,6 +30,7 @@ class PasswordRecoveryTest extends TestCase
     {
         $user = User::create([
             'name' => 'Recupera',
+            'ci' => fake()->unique()->numerify('#######'),
             'email' => $username.'@carto.com',
             'password' => 'password',
             'is_active' => true,

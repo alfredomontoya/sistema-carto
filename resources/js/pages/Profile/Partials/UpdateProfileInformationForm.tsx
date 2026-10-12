@@ -15,6 +15,7 @@ export default function UpdateProfileInformation({
     const userDomain = usePage().props.app.user_domain;
 
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
+        ci: user.ci ?? '',
         phone: user.phone ?? '',
         address: user.address ?? '',
         recovery_email: user.recovery_email ?? '',
@@ -90,6 +91,16 @@ export default function UpdateProfileInformation({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                    <Label htmlFor="ci">CI</Label>
+                    <Input
+                        id="ci"
+                        value={data.ci}
+                        onChange={(e) => setData('ci', e.target.value)}
+                        placeholder="4709978"
+                    />
+                    {errors.ci && <p className="text-sm text-destructive">{errors.ci}</p>}
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="phone">Teléfono</Label>
                     <Input

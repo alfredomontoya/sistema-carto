@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Services\CommunicationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,6 +53,50 @@ class DashboardController extends Controller
             'periodYear' => $periodYear,
             'includeAnnulled' => $includeAnnulled,
         ]);
+    }
+
+    /**
+     * Generate the detailed communications PDF report for the
+     * selected period. Streams inline so the browser shows its
+     * PDF viewer preview.
+     */
+    public function report(Request $request): HttpResponse
+    {
+        $validated = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d'],
+            'annulled' => ['sometimes', 'boolean'],
+        ]);
+
+        $from = Carbon::createFromFormat('Y-m-d', $validated['from'])->startOfDay();
+        $to = Carbon::createFromFormat('Y-m-d', $validated['to'])->startOfDay();
+
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $includeAnnulled = (bool) ($validated['annulled'] ?? false);
+        $user = $request->user();
+        $rows = $this->communications->getReportData(
+            $user,
+            $from->toDateString(),
+            $to->toDateString(),
+            $includeAnnulled,
+        );
+
+        $pdf = Pdf::loadView('reports.communications', [
+            'appName' => (string) config('app.name'),
+            'generatedBy' => $user->name,
+            'generatedAt' => now()->format('d/m/Y H:i'),
+            'from' => $from->format('d/m/Y'),
+            'to' => $to->format('d/m/Y'),
+            'includeAnnulled' => $includeAnnulled,
+            'areaName' => $user->currentArea?->name,
+            'rows' => $rows,
+            'total' => $rows->count(),
+        ])->setPaper('letter', 'landscape')->setOption('isPhpEnabled', true);
+
+        return $pdf->stream("reporte-comunicaciones-{$from->format('Ymd')}-{$to->format('Ymd')}.pdf");
     }
 
     /**

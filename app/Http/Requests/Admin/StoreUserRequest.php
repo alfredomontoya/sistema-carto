@@ -16,6 +16,7 @@ class StoreUserRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'ci' => $this->sanitizeText($this->input('ci')),
             'name' => $this->sanitizeText($this->input('name')),
             'username' => $this->sanitizeUsername($this->input('username')),
             'phone' => $this->sanitizePhone($this->input('phone')),
@@ -32,6 +33,7 @@ class StoreUserRequest extends FormRequest
     public function rules(UserRepository $users): array
     {
         return [
+            'ci' => ['required', 'string', 'max:255', 'unique:users,ci'],
             'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',

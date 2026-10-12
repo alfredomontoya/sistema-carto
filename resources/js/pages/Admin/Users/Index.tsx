@@ -78,7 +78,7 @@ export default function UsersIndex({
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     className="pl-9"
-                                    placeholder="Buscar por nombre o usuario…"
+                                    placeholder="Buscar por nombre, usuario o CI…"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
@@ -123,6 +123,7 @@ export default function UsersIndex({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Usuario</TableHead>
+                                    <TableHead>CI</TableHead>
                                     <TableHead>Roles</TableHead>
                                     <TableHead>Puesto / Área</TableHead>
                                     <TableHead>Estado</TableHead>
@@ -132,7 +133,7 @@ export default function UsersIndex({
                             <TableBody>
                                 {users.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                             No se encontraron usuarios.
                                         </TableCell>
                                     </TableRow>
@@ -149,6 +150,9 @@ export default function UsersIndex({
                                                     </p>
                                                 </div>
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-foreground">{u.ci}</span>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">

@@ -7,8 +7,8 @@ use App\Models\Communication;
 use App\Repositories\Contracts\CommunicationRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -107,6 +107,30 @@ class EloquentCommunicationRepository implements CommunicationRepository
         if ($userId) {
             $query->where("{$prefix}user_id", $userId);
         }
+    }
+
+    /**
+     * @return Collection<int, Communication>
+     */
+    public function reportData(string $from, string $to, ?string $areaId = null, bool $includeAnnulled = false): Collection
+    {
+        [$start, $end] = $this->dayRange($from, $to);
+
+        $query = Communication::query()
+            ->with(['area', 'areaDestino', 'user'])
+            ->whereBetween('created_at', [$start, $end]);
+
+        if (! $includeAnnulled) {
+            $query->where('status', Communication::STATUS_ACTIVE);
+        }
+
+        if ($areaId) {
+            $query->where('area_id', $areaId);
+        }
+
+        return $query->orderBy('created_at')
+            ->orderBy('sequence')
+            ->get();
     }
 
     /**

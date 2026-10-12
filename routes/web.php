@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\NumberingController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -18,6 +19,7 @@ Route::redirect('/', '/dashboard');
 
 Route::middleware(['auth', RequirePasswordChange::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/reporte', [DashboardController::class, 'report'])->name('dashboard.report');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -53,6 +55,22 @@ Route::middleware(['auth', RequirePasswordChange::class])->group(function () {
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])
             ->middleware('permission:manage users')
             ->name('users.reset-password');
+
+        Route::get('backups', [BackupController::class, 'index'])
+            ->middleware('permission:manage backups')
+            ->name('backups.index');
+        Route::post('backups', [BackupController::class, 'store'])
+            ->middleware('permission:manage backups')
+            ->name('backups.store');
+        Route::post('backups/restaurar', [BackupController::class, 'restore'])
+            ->middleware('permission:manage backups')
+            ->name('backups.restore');
+        Route::put('backups/ajustes', [BackupController::class, 'update'])
+            ->middleware('permission:manage backups')
+            ->name('backups.update');
+        Route::get('backups/{file}/descargar', [BackupController::class, 'download'])
+            ->middleware('permission:manage backups')
+            ->name('backups.download');
 
         Route::resource('areas', AreaController::class)
             ->only(['index', 'store', 'update', 'destroy'])

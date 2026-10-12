@@ -19,6 +19,7 @@ class UserResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'ci' => $this->ci,
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
@@ -56,6 +57,7 @@ class UserResource extends JsonResource
                 'manage_users' => $this->can('manage users'),
                 'manage_areas' => $this->can('manage areas'),
                 'manage_settings' => $this->can('manage settings'),
+                'manage_backups' => $this->can('manage backups'),
             ],
         ];
     }

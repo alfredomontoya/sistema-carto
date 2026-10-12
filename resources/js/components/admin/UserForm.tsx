@@ -35,6 +35,7 @@ export function UserForm({
     const userDomain = usePage().props.app.user_domain;
 
     const { data, setData, post, put, processing, errors } = useForm({
+        ci: user?.ci ?? '',
         name: user?.name ?? '',
         username: user?.username ?? '',
         phone: user?.phone ?? '',
@@ -93,6 +94,17 @@ export function UserForm({
                     {errors.username && (
                         <p className="text-sm text-destructive">{errors.username}</p>
                     )}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="ci">CI</Label>
+                    <Input
+                        id="ci"
+                        value={data.ci}
+                        onChange={(e) => setData('ci', e.target.value)}
+                        placeholder="4709978"
+                    />
+                    {errors.ci && <p className="text-sm text-destructive">{errors.ci}</p>}
                 </div>
 
                 <div className="space-y-2">

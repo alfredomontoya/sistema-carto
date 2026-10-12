@@ -193,53 +193,54 @@ class CommunicationService
         $cacheKey = $this->buildStatsCacheKey($user, $year);
 
         return Cache::remember($cacheKey, 300, function () use ($user, $year) {
-            $isAdmin = $user->seesGlobalStats();
+            [$areaId, $global] = $this->resolveStatsScope($user);
 
-            $areaId = $isAdmin ? null : $user->currentArea?->id;
-            $userId = $isAdmin ? null : $user->id;
+            if (! $global && $areaId === null) {
+                return [];
+            }
 
-            return $this->communications->getMonthlyStats($year, $areaId, $userId);
+            return $this->communications->getMonthlyStats($year, $global ? null : $areaId, null);
         });
     }
 
     public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
-        $isAdmin = $user->seesGlobalStats();
+        [$areaId, $global] = $this->resolveStatsScope($user);
         $scopeAreaIds = $this->resolveDestinoScope($user);
         $scope = $scopeAreaIds === null
-            ? ($isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}")
+            ? $this->statsScopeKey($user)
             : 'areas_'.md5(implode(',', [...$scopeAreaIds]));
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $scopeAreaIds, $includeAnnulled) {
-            $areaId = $isAdmin ? null : $user->currentArea?->id;
-            $userId = $isAdmin ? null : $user->id;
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $global, $areaId, $scopeAreaIds, $includeAnnulled) {
+            if (! $global && $areaId === null) {
+                return [];
+            }
 
-            return $this->communications->getDestinoStats($from, $to, $areaId, $userId, $includeAnnulled, $scopeAreaIds);
+            return $this->communications->getDestinoStats($from, $to, $global ? null : $areaId, null, $includeAnnulled, $scopeAreaIds);
         });
     }
 
     /**
-     * Areas visible in the destino stats: every area for administrators,
-     * the own subtree for jefes, null (legacy data-driven rows) for the rest.
+     * Areas visible in the destino stats: every area for area-less
+     * administrators, the own subtree for jefes, null (area-wide
+     * legacy rows) for the rest.
      *
      * @return array<int, string>|null
      */
     private function resolveDestinoScope(User $user): ?array
     {
-        if ($user->hasRole('administrador')) {
-            return $this->areaRepository->all()->pluck('id')->all();
+        $user->loadMissing('currentAssignment.position.area');
+        $area = $user->currentArea;
+
+        if ($area === null) {
+            return $user->hasRole('administrador')
+                ? $this->areaRepository->all()->pluck('id')->all()
+                : [];
         }
 
         if ($user->hasRole('jefe')) {
-            $user->loadMissing('currentAssignment.position.area');
-            $area = $user->currentArea;
-
-            if ($area === null) {
-                return [];
-            }
-
             return array_merge([$area->id], $this->areaRepository->descendantIds($area));
         }
 
@@ -248,37 +249,86 @@ class CommunicationService
 
     public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
     {
-        $isAdmin = $user->seesGlobalStats();
-        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $scope = $this->statsScopeKey($user);
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:usuarios:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $isAdmin, $includeAnnulled) {
-            $areaId = $isAdmin ? null : $user->currentArea?->id;
-            $userId = $isAdmin ? null : $user->id;
+        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $includeAnnulled) {
+            [$areaId, $global] = $this->resolveStatsScope($user);
 
-            return $this->communications->getUserStats($from, $to, $areaId, $userId, $includeAnnulled);
+            if (! $global && $areaId === null) {
+                return [];
+            }
+
+            return $this->communications->getUserStats($from, $to, $global ? null : $areaId, null, $includeAnnulled);
         });
     }
 
     public function getAvailableYears(User $user): array
     {
-        $isAdmin = $user->seesGlobalStats();
-        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $scope = $this->statsScopeKey($user);
         $cacheKey = "dashboard:years:v{$this->statsVersion()}:{$scope}";
 
-        return Cache::remember($cacheKey, 3600, function () use ($user, $isAdmin) {
-            $areaId = $isAdmin ? null : $user->currentArea?->id;
-            $userId = $isAdmin ? null : $user->id;
+        return Cache::remember($cacheKey, 3600, function () use ($user) {
+            [$areaId, $global] = $this->resolveStatsScope($user);
 
-            return $this->communications->getAvailableYears($areaId, $userId);
+            if (! $global && $areaId === null) {
+                return [];
+            }
+
+            return $this->communications->getAvailableYears($global ? null : $areaId, null);
         });
+    }
+
+    /**
+     * Detailed rows for the PDF report, scoped to the user's area
+     * (global only for area-less admins, empty for area-less others).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Communication>
+     */
+    public function getReportData(User $user, string $from, string $to, bool $includeAnnulled = false): \Illuminate\Database\Eloquent\Collection
+    {
+        [$areaId, $global] = $this->resolveStatsScope($user);
+
+        if (! $global && $areaId === null) {
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+
+        return $this->communications->reportData($from, $to, $global ? null : $areaId, $includeAnnulled);
+    }
+
+    /**
+     * Dashboard scope: the user's own area when they have one
+     * (admins included), global only for area-less admins,
+     * empty for area-less basic users.
+     *
+     * @return array{string|null, bool} [areaId, global]
+     */
+    private function resolveStatsScope(User $user): array
+    {
+        $areaId = $user->currentArea?->id;
+
+        if ($areaId !== null) {
+            return [$areaId, false];
+        }
+
+        return [null, $user->seesGlobalStats()];
+    }
+
+    private function statsScopeKey(User $user): string
+    {
+        [$areaId, $global] = $this->resolveStatsScope($user);
+
+        if ($global) {
+            return 'global';
+        }
+
+        return $areaId !== null ? "area_{$areaId}" : 'none';
     }
 
     private function buildStatsCacheKey(User $user, int $year): string
     {
-        $isAdmin = $user->seesGlobalStats();
-        $scope = $isAdmin ? 'global' : "area_{$user->currentArea?->id}_user_{$user->id}";
+        $scope = $this->statsScopeKey($user);
         return "dashboard:stats:v{$this->statsVersion()}:{$scope}:{$year}";
     }
 

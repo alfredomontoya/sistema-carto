@@ -1,11 +1,11 @@
-import { Hash, LayoutDashboard, Mail, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
+import { DatabaseBackup, Hash, LayoutDashboard, Mail, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
     label: string;
     href: string;
     icon: LucideIcon;
-    permission?: 'manage_users' | 'manage_areas' | 'manage_settings';
+    permission?: 'manage_users' | 'manage_areas' | 'manage_settings' | 'manage_backups';
 }
 
 export interface NavSection {
@@ -17,6 +17,7 @@ export function navigation(permissions: {
     manage_users: boolean;
     manage_areas: boolean;
     manage_settings: boolean;
+    manage_backups: boolean;
 }): NavSection[] {
     const sections: NavSection[] = [
         {
@@ -42,6 +43,9 @@ export function navigation(permissions: {
     }
     if (permissions.manage_settings) {
         adminItems.push({ label: 'Ajustes', href: '/admin/settings', icon: Palette });
+    }
+    if (permissions.manage_backups) {
+        adminItems.push({ label: 'Respaldos', href: '/admin/backups', icon: DatabaseBackup });
     }
 
     if (adminItems.length > 0) {

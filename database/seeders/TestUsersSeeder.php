@@ -10,12 +10,13 @@ use Illuminate\Support\Facades\Hash;
 
 class TestUsersSeeder extends Seeder
 {
-    private const FACTORY_COUNT = 20;
+    private const FACTORY_COUNT = 0;
 
     /**
-     * Create test users (password 'password' for all): 5 fixed ones plus
-     * 20 from the factory, each assigned a random position (any area
-     * except OTRO). Users that already hold a position keep it.
+     * Create test users (password 'password' for all): 3 fixed ones plus
+     * 0 from the factory, each assigned to ABOGADO /
+     * DEPARTAMENTO DE CARTOGRAFIA. Users that already hold a position
+     * keep it.
      * Run with: php artisan db:seed --class=TestUsersSeeder
      */
     public function run(): void
@@ -23,11 +24,9 @@ class TestUsersSeeder extends Seeder
         $userService = app(UserService::class);
 
         $users = [
-            ['name' => 'Romer Teddy', 'username' => 'jefe'],
-            ['name' => 'Cumpa Albert', 'username' => 'tecnico'],
-            ['name' => 'Ana', 'username' => 'abogado'],
-            ['name' => 'Yeny Ortiz', 'username' => 'secretaria'],
-            ['name' => 'Ramiro Renteria', 'username' => 'asistente'],
+            ['name' => 'Tatiana Parada Coimbra', 'ci' => '4709978', 'username' => 'tparada', 'role' => 'user'],
+            ['name' => 'Maria Silvana Wesember Zelaya', 'ci' => '6255105', 'username' => 'mswesember', 'role' => 'user'],
+            ['name' => 'Paola Ydem Ordoñez Roca', 'ci' => '8195426', 'username' => 'pyordonez', 'role' => 'user'],
         ];
 
         foreach ($users as $entry) {
@@ -35,6 +34,7 @@ class TestUsersSeeder extends Seeder
                 ['email' => UserService::emailFor($entry['username'])],
                 [
                     'name' => $entry['name'],
+                    'ci' => $entry['ci'],
                     'password' => Hash::make('password'),
                     'is_active' => true,
                     'avatar_kind' => 'gallery',
@@ -43,7 +43,7 @@ class TestUsersSeeder extends Seeder
             );
 
             $user->assignRole('usuario');
-            $position = $this->randomPosition();
+            $position = $this->lawyerPosition();
 
             $this->assignIfVacant($userService, $user, $position);
 
@@ -53,7 +53,7 @@ class TestUsersSeeder extends Seeder
 
         User::factory()->count(self::FACTORY_COUNT)->create()->each(function (User $user) use ($userService) {
             $user->assignRole('usuario');
-            $position = $this->randomPosition();
+            $position = $this->lawyerPosition();
 
             $this->assignIfVacant($userService, $user, $position);
         });
@@ -61,10 +61,10 @@ class TestUsersSeeder extends Seeder
         $this->command?->info(self::FACTORY_COUNT.' usuarios aleatorios creados con el factory.');
     }
 
-    private function randomPosition(): ?Position
+    private function lawyerPosition(): ?Position
     {
-        return Position::whereHas('area', fn ($query) => $query->where('code', '!=', 'otro'))
-            ->inRandomOrder()
+        return Position::where('code', 'abogado')
+            ->whereHas('area', fn ($query) => $query->where('code', 'carto'))
             ->first();
     }
 

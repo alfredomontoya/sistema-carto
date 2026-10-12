@@ -46,6 +46,7 @@ class DashboardPeriodTest extends TestCase
 
         $this->user = User::create([
             'name' => 'Tester',
+            'ci' => '1000012',
             'email' => 'tester@carto.com',
             'password' => 'password',
             'is_active' => true,

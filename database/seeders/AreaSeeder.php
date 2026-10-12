@@ -26,6 +26,8 @@ class AreaSeeder extends Seeder
         $this->upsertArea('taes', 'DEPARTAMENTO DE TAES', 'dot');
 
         $this->upsertArea('otro', 'OTRO');
+
+        $this->upsertArea('sistemas', 'SISTEMAS');
     }
 
     private function upsertArea(string $code, string $name, ?string $parentCode = null, ?string $numberingForCode = null): void

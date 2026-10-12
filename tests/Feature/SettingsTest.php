@@ -18,6 +18,7 @@ class SettingsTest extends TestCase
 
         $user = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000001',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,

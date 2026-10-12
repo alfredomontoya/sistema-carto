@@ -28,6 +28,7 @@ class UserFactory extends Factory
         $username = fake()->unique()->userName();
 
         return [
+            'ci' => fake()->unique()->numerify('#######'),
             'name' => fake()->name(),
             'email' => UserService::emailFor($username),
             'email_verified_at' => now(),

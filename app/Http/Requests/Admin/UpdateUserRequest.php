@@ -15,6 +15,7 @@ class UpdateUserRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'ci' => $this->sanitizeText($this->input('ci')),
             'name' => $this->sanitizeText($this->input('name')),
             'username' => $this->sanitizeUsername($this->input('username')),
             'phone' => $this->sanitizePhone($this->input('phone')),
@@ -31,6 +32,12 @@ class UpdateUserRequest extends FormRequest
     public function rules(UserRepository $users): array
     {
         return [
+            'ci' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users', 'ci')->ignore($this->route('user')),
+            ],
             'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',

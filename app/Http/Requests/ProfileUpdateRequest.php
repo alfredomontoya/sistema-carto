@@ -17,6 +17,10 @@ class ProfileUpdateRequest extends FormRequest
             'address' => $this->sanitizeText($this->input('address')),
             'recovery_email' => $this->sanitizeUsername($this->input('recovery_email')),
         ]);
+
+        if ($this->filled('ci')) {
+            $this->merge(['ci' => $this->sanitizeText($this->input('ci'))]);
+        }
     }
 
     /**
@@ -27,6 +31,13 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'ci' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users', 'ci')->ignore($this->user()->id),
+            ],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'recovery_email' => [

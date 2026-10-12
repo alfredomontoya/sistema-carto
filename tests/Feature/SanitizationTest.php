@@ -36,6 +36,7 @@ class SanitizationTest extends TestCase
 
         $user = User::create([
             'name' => 'Admin Test',
+            'ci' => '1000002',
             'email' => UserService::emailFor('admin-test'),
             'password' => 'password',
             'is_active' => true,
@@ -56,6 +57,7 @@ class SanitizationTest extends TestCase
     {
         $this->actingAs($this->admin())->post('/admin/users', [
             'name' => '  Juan   Pérez  ',
+            'ci' => '7654321',
             'username' => '  JPerez  ',
             'password' => 'password',
             'password_confirmation' => 'password',

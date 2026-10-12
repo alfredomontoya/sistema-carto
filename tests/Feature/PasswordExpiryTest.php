@@ -17,6 +17,7 @@ class PasswordExpiryTest extends TestCase
     {
         $user = User::create([
             'name' => 'Vigencia',
+            'ci' => fake()->unique()->numerify('#######'),
             'email' => 'vigencia'.random_int(1000, 9999).'@carto.com',
             'password' => 'password',
             'is_active' => true,
@@ -83,6 +84,7 @@ class PasswordExpiryTest extends TestCase
 
         $admin = User::create([
             'name' => 'Admin',
+            'ci' => '1000003',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,

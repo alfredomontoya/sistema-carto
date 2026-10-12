@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 use App\Models\Communication;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 interface CommunicationRepository
 {
@@ -54,4 +55,11 @@ interface CommunicationRepository
      * @return array<int, int>
      */
     public function getAvailableYears(?string $areaId = null, ?string $userId = null): array;
+
+    /**
+     * Detailed rows for the PDF report, ordered chronologically.
+     *
+     * @return Collection<int, Communication>
+     */
+    public function reportData(string $from, string $to, ?string $areaId = null, bool $includeAnnulled = false): Collection;
 }

@@ -13,7 +13,8 @@ import { ActividadSection } from '@/components/dashboard/ActividadSection';
 import { PeriodFilters } from '@/components/dashboard/PeriodFilters';
 import type { Period } from '@/components/dashboard/PeriodFilters';
 import { TotalsCards } from '@/components/dashboard/TotalsCards';
-import { BarChart2, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BarChart2, FileText, TrendingUp } from 'lucide-react';
 import AppLayout from '@/layouts/AppLayout';
 import type { FlashData, UserData } from '@/types';
 
@@ -117,18 +118,38 @@ export default function Dashboard() {
                     />
                 )}
 
-                <PeriodFilters
-                    period={period}
-                    from={from}
-                    to={to}
-                    periodYear={periodYear}
-                    availableYears={availableYears}
-                    includeAnnulled={includeAnnulled}
-                    onPeriodChange={(p) => applyPeriod(p, from, to)}
-                    onRangeChange={applyRange}
-                    onYearChange={(y) => applyPeriod(period, from, to, undefined, y)}
-                    onAnnulledChange={(v) => applyPeriod(period, from, to, v)}
-                />
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <PeriodFilters
+                            period={period}
+                            from={from}
+                            to={to}
+                            periodYear={periodYear}
+                            availableYears={availableYears}
+                            includeAnnulled={includeAnnulled}
+                            onPeriodChange={(p) => applyPeriod(p, from, to)}
+                            onRangeChange={applyRange}
+                            onYearChange={(y) => applyPeriod(period, from, to, undefined, y)}
+                            onAnnulledChange={(v) => applyPeriod(period, from, to, v)}
+                        />
+                    </div>
+                    <Button
+                        variant="secondary"
+                        onClick={() =>
+                            window.open(
+                                route('dashboard.report', {
+                                    from: dateFrom,
+                                    to: dateTo,
+                                    ...(includeAnnulled ? { annulled: 1 } : {}),
+                                }),
+                                '_blank',
+                                'noopener',
+                            )
+                        }
+                    >
+                        <FileText /> Generar reporte
+                    </Button>
+                </div>
 
                     {!isBasic && (
                     <div className="space-y-4">

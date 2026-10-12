@@ -45,6 +45,7 @@ class AuthSecurityTest extends TestCase
 
         $admin = User::create([
             'name' => 'Admin',
+            'ci' => '1000011',
             'email' => 'admin-test@example.com',
             'password' => 'password',
             'is_active' => true,

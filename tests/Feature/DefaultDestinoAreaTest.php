@@ -37,6 +37,7 @@ class DefaultDestinoAreaTest extends TestCase
 
         $user = User::create([
             'name' => 'Autor',
+            'ci' => '1000010',
             'email' => 'autor@carto.com',
             'password' => 'password',
             'is_active' => true,
