@@ -6,9 +6,11 @@ use App\Http\Requests\StoreCommunicationRequest;
 use App\Http\Requests\UpdateCommunicationRequest;
 use App\Http\Resources\AreaResource;
 use App\Http\Resources\CommunicationResource;
+use App\Http\Resources\CommunicationTypeResource;
 use App\Models\Communication;
 use App\Services\AreaService;
 use App\Services\CommunicationService;
+use App\Services\CommunicationTypeService;
 use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +25,7 @@ class CommunicationController extends Controller
         private readonly CommunicationService $communications,
         private readonly UserService $users,
         private readonly AreaService $areas,
+        private readonly CommunicationTypeService $types,
     ) {}
 
     public function index(Request $request): Response
@@ -59,6 +62,7 @@ class CommunicationController extends Controller
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
             'filters' => $filters,
             'counters' => $this->communications->countersFor($request->user(), now()->year),
+            'communication_types' => CommunicationTypeResource::collection($this->types->active())->resolve(),
             'current_area' => $request->user()->currentArea?->name,
             'year' => now()->year,
             'communications' => CommunicationResource::collection($records, $isAdmin)->resolve(),
@@ -77,6 +81,7 @@ class CommunicationController extends Controller
 
         return Inertia::render('Communications/Create', [
             'counters' => $this->communications->countersFor($request->user(), now()->year),
+            'communication_types' => CommunicationTypeResource::collection($this->types->active())->resolve(),
             'current_area' => $request->user()->currentArea?->name,
             'year' => now()->year,
         ]);
@@ -91,6 +96,7 @@ class CommunicationController extends Controller
         );
 
         $communication->load([
+            'communicationType',
             'area',
             'areaDestino',
             'user.currentAssignment.position.area',

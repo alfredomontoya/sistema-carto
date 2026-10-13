@@ -4,15 +4,17 @@ namespace App\Repositories\Eloquent;
 
 use App\Models\Area;
 use App\Models\AreaNumberCounter;
+use App\Models\Communication;
+use App\Models\CommunicationType;
 use App\Repositories\Contracts\NumberCounterRepository;
 use Illuminate\Support\Facades\DB;
 
 class EloquentNumberCounterRepository implements NumberCounterRepository
 {
-    public function current(string $areaId, string $type, int $year, bool $resetAnnually = true): int
+    public function current(string $areaId, string $communicationTypeId, int $year, bool $resetAnnually = true): int
     {
         $counter = AreaNumberCounter::where('area_id', $areaId)
-            ->where('type', $type)
+            ->where('communication_type_id', $communicationTypeId)
             ->where('year', $year)
             ->first();
 
@@ -22,18 +24,18 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
 
         if (! $resetAnnually) {
             return (int) AreaNumberCounter::where('area_id', $areaId)
-                ->where('type', $type)
+                ->where('communication_type_id', $communicationTypeId)
                 ->max('last_sequence');
         }
 
         return 0;
     }
 
-    public function incrementAndGet(string $areaId, string $type, int $year, bool $resetAnnually = true): int
+    public function incrementAndGet(string $areaId, string $communicationTypeId, int $year, bool $resetAnnually = true): int
     {
-        return DB::transaction(function () use ($areaId, $type, $year, $resetAnnually): int {
+        return DB::transaction(function () use ($areaId, $communicationTypeId, $year, $resetAnnually): int {
             $counter = AreaNumberCounter::where('area_id', $areaId)
-                ->where('type', $type)
+                ->where('communication_type_id', $communicationTypeId)
                 ->where('year', $year)
                 ->lockForUpdate()
                 ->first();
@@ -43,13 +45,13 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
 
                 if (! $resetAnnually) {
                     $initial = (int) AreaNumberCounter::where('area_id', $areaId)
-                        ->where('type', $type)
+                        ->where('communication_type_id', $communicationTypeId)
                         ->max('last_sequence');
                 }
 
                 $counter = AreaNumberCounter::create([
                     'area_id' => $areaId,
-                    'type' => $type,
+                    'communication_type_id' => $communicationTypeId,
                     'year' => $year,
                     'last_sequence' => $initial,
                 ]);
@@ -62,20 +64,24 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
         });
     }
 
-    public function resetForArea(string $areaId, int $year, array $types = []): void
+    public function resetForArea(string $areaId, int $year, array $communicationTypeIds = []): void
     {
         $query = AreaNumberCounter::where('area_id', $areaId)
             ->where('year', $year);
 
-        if ($types !== []) {
-            $query->whereIn('type', $types);
+        if ($communicationTypeIds !== []) {
+            $query->whereIn('communication_type_id', $communicationTypeIds);
         }
 
         $query->update(['last_sequence' => 0]);
 
-        foreach (($types !== [] ? $types : ['ci', 'of']) as $type) {
+        $typeIds = $communicationTypeIds !== []
+            ? $communicationTypeIds
+            : CommunicationType::pluck('id')->all();
+
+        foreach ($typeIds as $typeId) {
             AreaNumberCounter::updateOrCreate(
-                ['area_id' => $areaId, 'year' => $year, 'type' => $type],
+                ['area_id' => $areaId, 'year' => $year, 'communication_type_id' => $typeId],
                 ['last_sequence' => 0],
             );
         }
@@ -88,52 +94,68 @@ class EloquentNumberCounterRepository implements NumberCounterRepository
 
     public function overview(int $year, ?string $search = null): array
     {
-        $query = Area::query()
-            ->leftJoin('area_number_counters', function ($join) use ($year): void {
-                $join->on('area_number_counters.area_id', '=', 'areas.id')
-                    ->where('area_number_counters.year', '=', $year);
-            })
-            ->leftJoin('communications', function ($join) use ($year): void {
-                $join->on('communications.area_id', '=', 'areas.id')
-                    ->where('communications.year', '=', $year)
-                    ->where('communications.status', '=', 'activo');
-            })
-            ->groupBy('areas.id', 'areas.name', 'areas.code')
-            ->orderByDesc(DB::raw('MAX(`area_number_counters`.`last_sequence`)'))
-            ->orderBy('areas.name');
+        $areasQuery = Area::query()->orderBy('name');
 
         if ($search !== null && trim($search) !== '') {
-            $query->where(function ($query) use ($search): void {
+            $areasQuery->where(function ($query) use ($search): void {
                 $query->where('areas.name', 'like', "%{$search}%")
                     ->orWhere('areas.code', 'like', "%{$search}%");
             });
         }
 
-        return $query->get([
-            'areas.id as area_id',
-            'areas.name as area_name',
-            'areas.code as area_code',
-            DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'ci' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as ci_current"),
-            DB::raw("MAX(CASE WHEN `area_number_counters`.`type` = 'of' THEN `area_number_counters`.`last_sequence` ELSE 0 END) as of_current"),
-            DB::raw("MAX(CASE WHEN `communications`.`type` = 'ci' THEN `communications`.`sequence` ELSE 0 END) as ci_issued_max"),
-            DB::raw("MAX(CASE WHEN `communications`.`type` = 'of' THEN `communications`.`sequence` ELSE 0 END) as of_issued_max"),
-        ])
-            ->map(fn ($row) => [
-                'area_id' => (string) $row->area_id,
-                'area_name' => (string) $row->area_name,
-                'area_code' => (string) $row->area_code,
-                'ci_current' => (int) $row->ci_current,
-                'of_current' => (int) $row->of_current,
-                'ci_issued_max' => (int) $row->ci_issued_max,
-                'of_issued_max' => (int) $row->of_issued_max,
-            ])
-            ->all();
+        $areas = $areasQuery->get(['id', 'name', 'code']);
+        $types = CommunicationType::ordered()->get(['id', 'code', 'name']);
+
+        if ($areas->isEmpty()) {
+            return [];
+        }
+
+        $areaIds = $areas->pluck('id')->all();
+
+        $counters = AreaNumberCounter::where('year', $year)
+            ->whereIn('area_id', $areaIds)
+            ->get(['area_id', 'communication_type_id', 'last_sequence'])
+            ->keyBy(fn ($row) => $row->area_id.'|'.$row->communication_type_id);
+
+        $issued = Communication::where('year', $year)
+            ->where('status', Communication::STATUS_ACTIVE)
+            ->whereIn('area_id', $areaIds)
+            ->selectRaw('area_id, communication_type_id, MAX(sequence) as max_seq')
+            ->groupBy('area_id', 'communication_type_id')
+            ->get()
+            ->keyBy(fn ($row) => $row->area_id.'|'.$row->communication_type_id);
+
+        $rows = $areas->map(function ($area) use ($types, $counters, $issued) {
+            $byType = $types->map(fn ($type) => [
+                'type_id' => (string) $type->id,
+                'code' => (string) $type->code,
+                'name' => (string) $type->name,
+                'current' => (int) ($counters[$area->id.'|'.$type->id]->last_sequence ?? 0),
+                'issued_max' => (int) ($issued[$area->id.'|'.$type->id]->max_seq ?? 0),
+            ])->all();
+
+            return [
+                'area_id' => (string) $area->id,
+                'area_name' => (string) $area->name,
+                'area_code' => (string) $area->code,
+                'types' => $byType,
+            ];
+        })->all();
+
+        usort($rows, function (array $a, array $b): int {
+            $maxA = max(array_map(fn ($t) => $t['current'], $a['types'] ?: [0]));
+            $maxB = max(array_map(fn ($t) => $t['current'], $b['types'] ?: [0]));
+
+            return $maxB <=> $maxA ?: strcmp($a['area_name'], $b['area_name']);
+        });
+
+        return $rows;
     }
 
-    public function setSequence(string $areaId, string $type, int $year, int $value): void
+    public function setSequence(string $areaId, string $communicationTypeId, int $year, int $value): void
     {
         AreaNumberCounter::updateOrCreate(
-            ['area_id' => $areaId, 'type' => $type, 'year' => $year],
+            ['area_id' => $areaId, 'communication_type_id' => $communicationTypeId, 'year' => $year],
             ['last_sequence' => $value],
         );
     }

@@ -65,10 +65,12 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 ## Correlativo
 
 - **Formato**: `prefijo.codigo_area.secuencia/año` (ej. `ci.carto.0001/2026`).
-- Prefijos `ci`/`of` son constantes `TYPE_INTERNAL`/`TYPE_EXTERNAL` (en `NumberSequenceService` y `Communication`).
-- El formato lo genera `NumberSequenceService::format()` (código de área en minúsculas, secuencia con 4 dígitos).
-- `NumberSequenceService::parse()` extrae `type`/`area_code`/`sequence`/`year` desde un número (uso en auditoría/reparación).
-- El contador vive en `area_number_counters` (unique `area_id+year+type`).
+- Los tipos de comunicación viven en `type_communications` (modelo `CommunicationType`): `code` (prefijo, único, regex `^[a-z0-9_-]+$`), `name`, `digits` (relleno con ceros, 1-6, default 4), `format_template` opcional con variables `{prefix} {area} {seq} {year}`, `reset_annually` (default `true`), `is_active`, `sort_order`.
+- `communications.communication_type_id` FK (`restrictOnDelete`: no se elimina un tipo con comunicaciones). `area_number_counters.communication_type_id` FK (`cascadeOnDelete`); unique `area_id+year+communication_type_id`.
+- No hay seeds fijos de tipos: el admin los crea en `/admin/communication-types`. Las migraciones derivan tipos desde los códigos existentes para no romper datos.
+- El formato lo genera `NumberSequenceService::format()` (código de tipo y de área en minúsculas, secuencia con `digits` dígitos).
+- `NumberSequenceService::parse()` extrae `prefix`/`area_code`/`sequence`/`year` desde un número (uso en auditoría/reparación).
+- **Reinicio efectivo**: la secuencia reinicia cada año solo si el área (`areas.reset_annually`) Y el tipo (`type_communications.reset_annually`) lo permiten; si cualquiera es `false`, continúa del max previo.
 - **Nunca se reutiliza un número**, aunque la comunicación se anule.
 - La asignación es atómica (`incrementAndGet`) para evitar duplicados concurrentes.
 

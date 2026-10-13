@@ -9,18 +9,20 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { CountersData } from '@/types';
+import type { CommunicationTypeData, CountersData } from '@/types';
 
 export function CommunicationCreateDialog({
     open,
     onOpenChange,
     counters,
+    communication_types,
     current_area,
     year,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     counters: CountersData;
+    communication_types: CommunicationTypeData[];
     current_area: string | null;
     year: number;
 }) {
@@ -54,12 +56,13 @@ export function CommunicationCreateDialog({
                     <DialogHeader>
                         <DialogTitle>Nueva comunicación</DialogTitle>
                         <DialogDescription>
-                            Genera un correlativo interno (ci) u oficio externo (of) para el año {year}.
+                            Genera un correlativo para el año {year}.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6">
                         <CommunicationCreateForm
                             counters={counters}
+                            communication_types={communication_types}
                             current_area={current_area}
                             year={year}
                             onSuccess={() => onOpenChange(false)}

@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SetAreaNumberingRequest extends FormRequest
 {
@@ -16,8 +15,8 @@ class SetAreaNumberingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(['ci', 'of'])],
-            'value' => ['required', 'integer', 'min:0', 'max:9999'],
+            'communication_type_id' => ['required', 'uuid', 'exists:type_communications,id'],
+            'value' => ['required', 'integer', 'min:0', 'max:999999'],
             'force' => ['boolean'],
         ];
     }

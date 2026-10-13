@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\CommunicationTypeController;
 use App\Http\Controllers\Admin\NumberingController;
 use App\Http\Controllers\Admin\PositionController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -82,6 +83,10 @@ Route::middleware(['auth', RequirePasswordChange::class])->group(function () {
         Route::post('numbering/{area}', [NumberingController::class, 'setNumber'])
             ->middleware('permission:manage areas')
             ->name('numbering.set');
+
+        Route::resource('communication-types', CommunicationTypeController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->middleware('permission:manage areas');
 
         Route::resource('positions', PositionController::class)
             ->only(['store', 'update', 'destroy'])

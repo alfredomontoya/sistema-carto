@@ -7,11 +7,12 @@ use App\Models\Communication;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class CelebrateLoginTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private Area $area;
 
@@ -55,7 +56,7 @@ class CelebrateLoginTest extends TestCase
     {
         for ($i = 0; $i < $count; $i++) {
             Communication::create([
-                'type' => 'ci',
+                'communication_type_id' => $this->communicationType()->id,
                 'number' => "ci.carto.{$i}/2026",
                 'year' => 2026,
                 'sequence' => $i + 1,

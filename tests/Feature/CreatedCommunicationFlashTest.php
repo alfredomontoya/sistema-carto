@@ -8,11 +8,12 @@ use App\Models\PositionAssignment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class CreatedCommunicationFlashTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     public function test_store_shares_created_communication(): void
     {
@@ -50,7 +51,7 @@ class CreatedCommunicationFlashTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->post('/comunicaciones', [
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => 'Comunicación de prueba',
             'recipient_name' => 'Destinatario de prueba',
             'recipient_position' => 'TECNICO',
@@ -112,7 +113,7 @@ class CreatedCommunicationFlashTest extends TestCase
         ]);
 
         $communication = \App\Models\Communication::create([
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'number' => 'ci.carto.0001/2026',
             'year' => 2026,
             'sequence' => 1,
@@ -175,7 +176,7 @@ class CreatedCommunicationFlashTest extends TestCase
         $other->assignRole('usuario');
 
         $communication = \App\Models\Communication::create([
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'number' => 'ci.carto.0001/2026',
             'year' => 2026,
             'sequence' => 1,
@@ -237,7 +238,7 @@ class CreatedCommunicationFlashTest extends TestCase
         $admin->assignRole('administrador');
 
         $communication = \App\Models\Communication::create([
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'number' => 'ci.carto.0001/2026',
             'year' => 2026,
             'sequence' => 1,

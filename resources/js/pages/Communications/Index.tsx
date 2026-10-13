@@ -37,7 +37,7 @@ import {
 import { DataTablePagination } from '@/components/DataTablePagination';
 import { formatDateTime } from '@/lib/dates';
 import AppLayout from '@/layouts/AppLayout';
-import type { AreaData, CommunicationData, CountersData, PaginationData } from '@/types';
+import type { AreaData, CommunicationData, CommunicationTypeData, CountersData, PaginationData } from '@/types';
 
 type Filters = {
     search?: string;
@@ -55,6 +55,7 @@ export default function CommunicationsIndex({
     filters,
     pagination,
     counters,
+    communication_types,
     current_area,
     year,
     created = null,
@@ -64,6 +65,7 @@ export default function CommunicationsIndex({
     filters: Filters;
     pagination?: PaginationData;
     counters: CountersData;
+    communication_types: CommunicationTypeData[];
     current_area: string | null;
     year: number;
     created?: CommunicationData | null;
@@ -176,8 +178,11 @@ export default function CommunicationsIndex({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="__all">Todos los tipos</SelectItem>
-                                                <SelectItem value="ci">Comunicación interna</SelectItem>
-                                                <SelectItem value="of">Oficio externo</SelectItem>
+                                                {communication_types.map((t) => (
+                                                    <SelectItem key={t.id} value={t.code}>
+                                                        {t.name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -280,8 +285,8 @@ export default function CommunicationsIndex({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge variant={c.type === 'ci' ? 'secondary' : 'outline'}>
-                                                            {c.type === 'ci' ? 'Interna' : 'Externo'}
+                                                        <Badge variant="secondary">
+                                                            {c.communication_type?.name ?? c.type ?? '—'}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
@@ -398,6 +403,7 @@ export default function CommunicationsIndex({
                 open={createOpen}
                 onOpenChange={setCreateOpen}
                 counters={counters}
+                communication_types={communication_types}
                 current_area={current_area}
                 year={year}
             />

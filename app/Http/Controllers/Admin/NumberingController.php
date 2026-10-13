@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SetAreaNumberingRequest;
 use App\Services\AreaService;
+use App\Services\CommunicationTypeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,6 +15,7 @@ class NumberingController extends Controller
 {
     public function __construct(
         private readonly AreaService $areas,
+        private readonly CommunicationTypeService $types,
     ) {}
 
     public function index(Request $request): Response
@@ -35,20 +37,23 @@ class NumberingController extends Controller
             abort(404);
         }
 
-        $type = $request->validated('type');
+        $type = $this->types->find($request->validated('communication_type_id'));
+
+        if ($type === null) {
+            abort(404);
+        }
+
         $value = (int) $request->validated('value');
         $force = $request->boolean('force');
 
-        $set = $this->areas->setNumbering($area, $type, $value, $force);
+        $set = $this->areas->setNumbering($area, $type->id, $value, $force);
 
         if (! $set) {
             return redirect()->route('admin.numbering.index')
-                ->with('error', "No se puede fijar {$area->name} ({$type}) en {$value}: ya se emitieron números superiores. Usa forzar para continuar.");
+                ->with('error', "No se puede fijar {$area->name} ({$type->code}) en {$value}: ya se emitieron números superiores. Usa forzar para continuar.");
         }
 
-        $label = $type === 'ci' ? 'comunicaciones' : 'oficios';
-
         return redirect()->route('admin.numbering.index')
-            ->with('success', "Numeración de {$label} de {$area->name} fijada en {$value}.");
+            ->with('success', "Numeración de {$type->name} de {$area->name} fijada en {$value}.");
     }
 }

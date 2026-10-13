@@ -11,23 +11,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import type { CountersData } from '@/types';
+import type { CommunicationTypeData, CountersData } from '@/types';
 
 export function CommunicationCreateForm({
     counters,
+    communication_types,
     current_area,
     year,
     onSuccess,
     onDirtyChange,
 }: {
     counters: CountersData;
+    communication_types: CommunicationTypeData[];
     current_area: string | null;
     year: number;
     onSuccess?: () => void;
     onDirtyChange?: (dirty: boolean) => void;
 }) {
+    const firstType = communication_types[0];
     const { data, setData, post, processing, errors, setError, clearErrors, isDirty } = useForm({
-        type: 'ci' as 'ci' | 'of',
+        communication_type_id: firstType?.id ?? '',
         reference: '',
         recipient_name: '',
         recipient_position: '',
@@ -36,7 +39,9 @@ export function CommunicationCreateForm({
         area_destino_nombre: '',
     });
 
-    const setType = (type: 'ci' | 'of') => setData('type', type);
+    const setType = (id: string) => setData('communication_type_id', id);
+    const selectedType = communication_types.find((t) => t.id === data.communication_type_id) ?? firstType;
+    const nextNumber = counters.types.find((t) => t.id === data.communication_type_id)?.next_number ?? '—';
 
     React.useEffect(() => {
         onDirtyChange?.(isDirty);
@@ -45,6 +50,10 @@ export function CommunicationCreateForm({
     const validateLocal = (): boolean => {
         clearErrors();
         let ok = true;
+        if (!data.communication_type_id) {
+            setError('communication_type_id', 'El tipo de documento es obligatorio.');
+            ok = false;
+        }
         if (!data.reference.trim()) {
             setError('reference', 'La referencia es obligatoria.');
             ok = false;
@@ -88,6 +97,19 @@ export function CommunicationCreateForm({
         );
     }
 
+    if (communication_types.length === 0) {
+        return (
+            <Card>
+                <CardContent className="p-4">
+                    <p className="text-muted-foreground">
+                        No hay tipos de comunicación activos. Pide al administrador
+                        que cree uno para poder generar correlativos.
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <Card>
             <CardContent className="space-y-4 p-4">
@@ -97,24 +119,24 @@ export function CommunicationCreateForm({
                         role="group"
                         aria-label="Tipo de documento"
                     >
-                        {(['ci', 'of'] as const).map((t) => (
+                        {communication_types.map((t) => (
                             <button
-                                key={t}
+                                key={t.id}
                                 type="button"
-                                onClick={() => setType(t)}
+                                onClick={() => setType(t.id)}
                                 className={cn(
                                     'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                                    data.type === t
+                                    data.communication_type_id === t.id
                                         ? 'bg-primary text-primary-foreground shadow-sm'
                                         : 'text-muted-foreground hover:bg-muted',
                                 )}
                             >
-                                {t === 'ci' ? 'Interna' : 'Oficio'}
+                                {t.name}
                             </button>
                         ))}
                     </div>
                     <p className="font-mono text-sm font-semibold uppercase text-foreground">
-                        {counters[data.type].next_number ?? '—'}
+                        {nextNumber}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         {current_area} · {year}
@@ -122,6 +144,9 @@ export function CommunicationCreateForm({
                             ` · numera como ${counters.numbering_area.name}`}
                     </p>
                 </div>
+                {errors.communication_type_id && (
+                    <p className="text-sm text-destructive">{errors.communication_type_id}</p>
+                )}
 
                 <Separator />
 
@@ -183,7 +208,7 @@ export function CommunicationCreateForm({
 
                     <div className="flex justify-end gap-2">
                         <Badge variant="secondary" className="self-center">
-                            {data.type === 'ci' ? 'Comunicación interna' : 'Oficio externo'}
+                            {selectedType?.name ?? '—'}
                         </Badge>
                         <Button type="submit" disabled={processing}>
                             <Save /> {processing ? 'Guardando…' : 'Guardar'}

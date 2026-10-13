@@ -17,42 +17,44 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout';
+
+interface NumberingTypeState {
+    type_id: string;
+    code: string;
+    name: string;
+    current: number;
+    issued_max: number;
+}
 
 interface NumberingRow {
     area_id: string;
     area_name: string;
     area_code: string;
-    ci_current: number;
-    of_current: number;
-    ci_issued_max: number;
-    of_issued_max: number;
+    types: NumberingTypeState[];
 }
-
-type DocType = 'ci' | 'of';
 
 interface ConfirmTarget {
     area_id: string;
     area_name: string;
-    type: DocType;
+    type_id: string;
+    type_code: string;
+    type_name: string;
     value: number;
     issuedMax: number;
 }
 
 function TypeCell({
-    row,
-    type,
+    current,
+    issuedMax,
     onConfirm,
 }: {
-    row: NumberingRow;
-    type: DocType;
-    onConfirm: (t: ConfirmTarget) => void;
+    current: number;
+    issuedMax: number;
+    onConfirm: (value: number, issuedMax: number) => void;
 }) {
-    const current = type === 'ci' ? row.ci_current : row.of_current;
-    const issuedMax = type === 'ci' ? row.ci_issued_max : row.of_issued_max;
     const [value, setValue] = useState('');
 
     return (
@@ -67,7 +69,7 @@ function TypeCell({
                 <Input
                     type="number"
                     min={0}
-                    max={9999}
+                    max={999999}
                     className="h-8 w-24"
                     placeholder="N"
                     value={value}
@@ -77,15 +79,7 @@ function TypeCell({
                     variant="outline"
                     size="sm"
                     disabled={value === ''}
-                    onClick={() =>
-                        onConfirm({
-                            area_id: row.area_id,
-                            area_name: row.area_name,
-                            type,
-                            value: Number(value),
-                            issuedMax,
-                        })
-                    }
+                    onClick={() => onConfirm(Number(value), issuedMax)}
                 >
                     Fijar
                 </Button>
@@ -93,15 +87,7 @@ function TypeCell({
                     variant="ghost"
                     size="sm"
                     title="Reiniciar (el siguiente será el 1)"
-                    onClick={() =>
-                        onConfirm({
-                            area_id: row.area_id,
-                            area_name: row.area_name,
-                            type,
-                            value: 0,
-                            issuedMax,
-                        })
-                    }
+                    onClick={() => onConfirm(0, issuedMax)}
                 >
                     <RotateCcw className="h-3.5 w-3.5" /> 1
                 </Button>
@@ -124,6 +110,18 @@ export default function NumberingIndex({
     const [force, setForce] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    const typeColumns: { type_id: string; code: string; name: string }[] = [];
+    for (const row of rows) {
+        for (const t of row.types) {
+            if (!typeColumns.some((c) => c.type_id === t.type_id)) {
+                typeColumns.push({ type_id: t.type_id, code: t.code, name: t.name });
+            }
+        }
+    }
+
+    const stateFor = (row: NumberingRow, type_id: string): NumberingTypeState | undefined =>
+        row.types.find((t) => t.type_id === type_id);
+
     useEffectOnUpdate(() => {
         const timeout = setTimeout(() => {
             router.get(
@@ -145,7 +143,7 @@ export default function NumberingIndex({
         if (!target) return;
         setSaving(true);
         router.post(route('admin.numbering.set', target.area_id), {
-            type: target.type,
+            communication_type_id: target.type_id,
             value: target.value,
             force: risky ? force : false,
         }, {
@@ -185,22 +183,19 @@ export default function NumberingIndex({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Área</TableHead>
-                                    <TableHead>
-                                        <span className="flex items-center gap-1.5">
-                                            <Hash className="h-3.5 w-3.5" /> Internas (ci)
-                                        </span>
-                                    </TableHead>
-                                    <TableHead>
-                                        <span className="flex items-center gap-1.5">
-                                            <Hash className="h-3.5 w-3.5" /> Oficios (of)
-                                        </span>
-                                    </TableHead>
+                                    {typeColumns.map((c) => (
+                                        <TableHead key={c.type_id}>
+                                            <span className="flex items-center gap-1.5">
+                                                <Hash className="h-3.5 w-3.5" /> {c.name} ({c.code})
+                                            </span>
+                                        </TableHead>
+                                    ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {rows.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={1 + typeColumns.length} className="h-24 text-center text-muted-foreground">
                                             Sin áreas para el filtro actual.
                                         </TableCell>
                                     </TableRow>
@@ -213,12 +208,28 @@ export default function NumberingIndex({
                                                 {row.area_code}
                                             </p>
                                         </TableCell>
-                                        <TableCell>
-                                            <TypeCell row={row} type="ci" onConfirm={setTarget} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TypeCell row={row} type="of" onConfirm={setTarget} />
-                                        </TableCell>
+                                        {typeColumns.map((c) => {
+                                            const state = stateFor(row, c.type_id);
+                                            return (
+                                                <TableCell key={c.type_id}>
+                                                    <TypeCell
+                                                        current={state?.current ?? 0}
+                                                        issuedMax={state?.issued_max ?? 0}
+                                                        onConfirm={(value, issuedMax) =>
+                                                            setTarget({
+                                                                area_id: row.area_id,
+                                                                area_name: row.area_name,
+                                                                type_id: c.type_id,
+                                                                type_code: c.code,
+                                                                type_name: c.name,
+                                                                value,
+                                                                issuedMax,
+                                                            })
+                                                        }
+                                                    />
+                                                </TableCell>
+                                            );
+                                        })}
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -231,17 +242,17 @@ export default function NumberingIndex({
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            Fijar numeración de {target?.type === 'ci' ? 'internas' : 'oficios'}
+                            Fijar numeración de {target?.type_name}
                         </DialogTitle>
                         <DialogDescription>
                             {target?.value === 0 ? (
                                 <>
-                                    Se <strong>reiniciará</strong> {target?.area_name} ({target?.type}):
+                                    Se <strong>reiniciará</strong> {target?.area_name} ({target?.type_code}):
                                     el siguiente correlativo será el <strong>1</strong>.
                                 </>
                             ) : (
                                 <>
-                                    Se fijará {target?.area_name} ({target?.type}) en{' '}
+                                    Se fijará {target?.area_name} ({target?.type_code}) en{' '}
                                     <strong className="font-mono">{target?.value}</strong>: el
                                     siguiente correlativo será el{' '}
                                     <strong className="font-mono">{(target?.value ?? 0) + 1}</strong>.

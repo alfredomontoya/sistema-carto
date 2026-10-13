@@ -1,4 +1,4 @@
-import { DatabaseBackup, Hash, LayoutDashboard, Mail, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
+import { DatabaseBackup, Hash, LayoutDashboard, Mail, MailPlus, Settings, Users, Boxes, Palette, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
@@ -39,6 +39,7 @@ export function navigation(permissions: {
     }
     if (permissions.manage_areas) {
         adminItems.push({ label: 'Áreas', href: '/admin/areas', icon: Boxes });
+        adminItems.push({ label: 'Tipos de comunicación', href: '/admin/communication-types', icon: MailPlus });
         adminItems.push({ label: 'Numeración', href: '/admin/numbering', icon: Hash });
     }
     if (permissions.manage_settings) {

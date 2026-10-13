@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Communication;
 use App\Http\Requests\Concerns\SanitizesInput;
 use App\Services\CommunicationService;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -31,7 +30,7 @@ class StoreCommunicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in([Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL])],
+            'communication_type_id' => ['required', 'uuid', Rule::exists('type_communications', 'id')->where('is_active', true)],
             'reference' => ['required', 'string', 'max:1000'],
             'recipient_name' => ['required', 'string', 'max:255'],
             'recipient_position' => ['required', 'string', 'max:255'],

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Area;
 use App\Models\Communication;
 use App\Models\AreaNumberCounter;
+use App\Models\CommunicationType;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -67,6 +68,11 @@ class DemoCommunicationsSeeder extends Seeder
         $areas = Area::with('positions')->get()->keyBy('id');
         $numberingAreas = $this->resolveNumberingAreas($areas);
 
+        // Communication types for the demo data (derived on demand, not
+        // fixed seeds): ci for internal, of for external.
+        $ciType = $this->ensureType('ci', 'Comunicación interna', 0);
+        $ofType = $this->ensureType('of', 'Oficio externo', 1);
+
         // Secuencias en memoria por área de numeración, tipo y año (el año
         // deriva de cada fecha generada), continuando desde el contador
         // persistido para no pisar numeración existente.
@@ -79,7 +85,7 @@ class DemoCommunicationsSeeder extends Seeder
         for ($i = 0; $i < self::COUNT; $i++) {
             // Creador al azar y tipo de documento (70% internas).
             $user = $users->random();
-            $type = fake()->boolean(70) ? Communication::TYPE_INTERNAL : Communication::TYPE_EXTERNAL;
+            $type = fake()->boolean(70) ? $ciType : $ofType;
 
             // Área real del creador y su área de numeración.
             $area = $user->currentArea;
@@ -98,13 +104,13 @@ class DemoCommunicationsSeeder extends Seeder
             // El año deriva de la fecha generada, no de una constante.
             $year = $stampedAt->year;
 
-            // Siguiente número del correlativo: prefijo.tipo.codigo.secuencia/año.
-            $sequences[$numberingArea->id][$type][$year] ??= (int) AreaNumberCounter::where('area_id', $numberingArea->id)
-                ->where('type', $type)
+            // Siguiente número del correlativo: prefijo.codigo.secuencia/año.
+            $sequences[$numberingArea->id][$type->id][$year] ??= (int) AreaNumberCounter::where('area_id', $numberingArea->id)
+                ->where('communication_type_id', $type->id)
                 ->where('year', $year)
                 ->value('last_sequence') ?? 0;
-            $sequence = ++$sequences[$numberingArea->id][$type][$year];
-            $number = sprintf('%s.%s.%04d/%d', $type, strtolower($numberingArea->code), $sequence, $year);
+            $sequence = ++$sequences[$numberingArea->id][$type->id][$year];
+            $number = sprintf('%s.%s.%s/%d', $type->code, strtolower($numberingArea->code), str_pad((string) $sequence, $type->digits, '0', STR_PAD_LEFT), $year);
 
             // Estado final sorteado de una vez (12% anuladas) para no hacer
             // un UPDATE posterior por registro.
@@ -113,8 +119,8 @@ class DemoCommunicationsSeeder extends Seeder
             // Fila lista para bulk insert, con UUID y marcas de tiempo propias.
             $rows[] = [
                 'id' => (string) Str::orderedUuid(),
-                ...$this->payload($type, $users, $user),
-                'type' => $type,
+                ...$this->payload($type->code, $users, $user),
+                'communication_type_id' => $type->id,
                 'number' => $number,
                 'year' => $year,
                 'sequence' => $sequence,
@@ -133,7 +139,7 @@ class DemoCommunicationsSeeder extends Seeder
             if ($annulled) {
                 $summary['anuladas']++;
             }
-            $summary[$type]++;
+            $summary[$type->code]++;
         }
 
         // Escritura atómica en chunks: 2 inserts en vez de ~1000 queries.
@@ -144,10 +150,10 @@ class DemoCommunicationsSeeder extends Seeder
 
             // Sincroniza los contadores persistidos con lo generado.
             foreach ($sequences as $areaId => $byType) {
-                foreach ($byType as $type => $byYear) {
+                foreach ($byType as $typeId => $byYear) {
                     foreach ($byYear as $year => $sequence) {
                         AreaNumberCounter::updateOrCreate(
-                            ['area_id' => $areaId, 'type' => $type, 'year' => $year],
+                            ['area_id' => $areaId, 'communication_type_id' => $typeId, 'year' => $year],
                             ['last_sequence' => $sequence],
                         );
                     }
@@ -161,6 +167,24 @@ class DemoCommunicationsSeeder extends Seeder
             'Se generaron '.self::COUNT." comunicaciones del {$start->format('d/m/Y')} al {$end->format('d/m/Y')}: {$summary['ci']} ci, {$summary['of']} of, {$summary['anuladas']} anuladas."
         );
         $this->command?->info("Por área: {$areasSummary}");
+    }
+
+    /**
+     * Get or create a communication type for demo data. Demo seeders derive
+     * their own types on demand; no fixed types are seeded by default.
+     */
+    private function ensureType(string $code, string $name, int $sortOrder): CommunicationType
+    {
+        return CommunicationType::firstOrCreate(
+            ['code' => $code],
+            [
+                'name' => $name,
+                'digits' => 4,
+                'reset_annually' => true,
+                'is_active' => true,
+                'sort_order' => $sortOrder,
+            ],
+        );
     }
 
     /**
@@ -193,7 +217,7 @@ class DemoCommunicationsSeeder extends Seeder
         $internal = fake()->boolean(60) ? $users->random() : null;
 
         // Área destino: siempre posible en ci; en of, mitad de las veces.
-        $destino = $type === Communication::TYPE_INTERNAL || fake()->boolean()
+        $destino = $type === 'ci' || fake()->boolean()
             ? $users->random()?->currentArea
             : null;
 

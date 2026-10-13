@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Area;
 use App\Models\AreaNumberCounter;
+use App\Models\CommunicationType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,8 +23,8 @@ class AreaNumberCounterFactory extends Factory
     {
         return [
             'area_id' => Area::factory(),
+            'communication_type_id' => CommunicationType::factory(),
             'year' => now()->year,
-            'type' => 'ci',
             'last_sequence' => 0,
         ];
     }

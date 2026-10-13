@@ -86,9 +86,22 @@ export interface AppData {
     user_domain: string;
 }
 
+export interface CommunicationTypeData {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    digits: number;
+    format_template: string | null;
+    reset_annually: boolean;
+    is_active: boolean;
+    sort_order: number;
+}
+
 export interface CommunicationData {
     id: string;
-    type: 'ci' | 'of';
+    type: string;
+    communication_type: { id: string; code: string; name: string } | null;
     number: string;
     year: number;
     sequence: number;
@@ -125,14 +138,21 @@ export interface PaginationData {
     last_page: number;
 }
 
+export interface CounterTypeState {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    next_number: string;
+}
+
 export interface CounterState {
     sequence: number;
     next_number: string | null;
 }
 
 export interface CountersData {
-    ci: CounterState;
-    of: CounterState;
+    types: CounterTypeState[];
     numbering_area: { code: string; name: string } | null;
 }
 

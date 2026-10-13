@@ -13,9 +13,10 @@ import { useTheme } from '@/components/brand/ThemeProvider';
 
 export interface DestinoStat {
     destino: string;
+    total: number;
     ci: number;
     of: number;
-    total: number;
+    [typeCode: string]: number | string;
 }
 
 const PALETTE = [

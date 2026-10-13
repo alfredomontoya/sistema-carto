@@ -10,11 +10,12 @@ use App\Services\AreaService;
 use App\Services\CommunicationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class DefaultDestinoAreaTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private function user(): User
     {
@@ -57,7 +58,7 @@ class DefaultDestinoAreaTest extends TestCase
     private function payload(array $extra = []): array
     {
         return [
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => 'Ref',
             'recipient_name' => 'Dest',
             'recipient_position' => 'TECNICO',

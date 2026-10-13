@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Area;
-use App\Models\AreaNumberCounter;
 use App\Models\Communication;
+use App\Models\CommunicationType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -24,14 +24,15 @@ class CommunicationFactory extends Factory
     {
         $area = Area::factory()->create();
         $year = now()->year;
-        $type = fake()->randomElement([Communication::TYPE_INTERNAL, Communication::TYPE_EXTERNAL]);
-        $destino = $type === Communication::TYPE_INTERNAL || fake()->boolean()
+        $type = CommunicationType::query()->inRandomOrder()->first()
+            ?? CommunicationType::factory()->create(['code' => 'ci', 'name' => 'Comunicación interna']);
+        $destino = $type->code === 'ci' || fake()->boolean()
             ? Area::inRandomOrder()->first()
             : null;
 
         return [
-            'type' => $type,
-            'number' => $type.'.'.strtolower($area->code).'.0001/'.$year,
+            'communication_type_id' => $type->id,
+            'number' => $type->code.'.'.strtolower($area->code).'.0001/'.$year,
             'year' => $year,
             'sequence' => 1,
             'area_id' => $area->id,

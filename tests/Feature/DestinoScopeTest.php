@@ -10,11 +10,12 @@ use App\Models\User;
 use App\Services\CommunicationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class DestinoScopeTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private Area $root;
 
@@ -66,7 +67,7 @@ class DestinoScopeTest extends TestCase
     private function makeComm(User $author, Area $destino): void
     {
         Communication::create([
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'number' => 'ci.x.'.random_int(1000, 9999).'/2026',
             'year' => 2026,
             'sequence' => random_int(1000, 9999),

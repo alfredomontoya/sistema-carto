@@ -23,7 +23,17 @@ class CommunicationResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'type' => $this->type,
+            'type' => $this->communicationType?->code,
+            'communication_type' => $this->whenLoaded(
+                'communicationType',
+                fn () => $this->communicationType !== null
+                    ? [
+                        'id' => $this->communicationType->id,
+                        'code' => $this->communicationType->code,
+                        'name' => $this->communicationType->name,
+                    ]
+                    : null,
+            ),
             'number' => $this->number,
             'year' => $this->year,
             'sequence' => $this->sequence,

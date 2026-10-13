@@ -10,11 +10,12 @@ use App\Models\User;
 use App\Services\CommunicationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class DashboardScopeTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private function makeUser(string $name, string $username, string $role, Position $position): User
     {
@@ -61,7 +62,7 @@ class DashboardScopeTest extends TestCase
 
         $service = app(CommunicationService::class);
         $payload = [
-            'type' => Communication::TYPE_INTERNAL,
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => 'Ref',
             'recipient_name' => 'Dest',
             'recipient_position' => 'TECNICO',
@@ -127,7 +128,7 @@ class DashboardScopeTest extends TestCase
 
         $service = app(CommunicationService::class);
         $payload = [
-            'type' => Communication::TYPE_INTERNAL,
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => 'Ref',
             'recipient_name' => 'Dest',
             'recipient_position' => 'TECNICO',

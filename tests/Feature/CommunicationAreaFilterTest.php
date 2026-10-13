@@ -9,11 +9,12 @@ use App\Models\PositionAssignment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class CommunicationAreaFilterTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private User $admin;
 
@@ -125,7 +126,7 @@ class CommunicationAreaFilterTest extends TestCase
     private function createCommunication(Area $area, string $type, string $number): void
     {
         Communication::create([
-            'type' => $type,
+            'communication_type_id' => $this->communicationType($type)->id,
             'number' => $number,
             'year' => now()->year,
             'sequence' => 1,

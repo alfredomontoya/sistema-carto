@@ -6,14 +6,16 @@ import { PageHeader } from '@/components/PageHeader';
 import { CommunicationCreateForm } from '@/components/communications/CommunicationCreateForm';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout';
-import type { CountersData } from '@/types';
+import type { CommunicationTypeData, CountersData } from '@/types';
 
 export default function Create({
     counters,
+    communication_types,
     current_area,
     year,
 }: {
     counters: CountersData;
+    communication_types: CommunicationTypeData[];
     current_area: string | null;
     year: number;
 }) {
@@ -25,7 +27,7 @@ export default function Create({
             <div className="mx-auto max-w-3xl space-y-6">
                 <PageHeader
                     title="Nueva comunicación"
-                    description={`Genera un correlativo interno (ci) u oficio externo (of) para el año ${year}.`}
+                    description={`Genera un correlativo para el año ${year}.`}
                     actions={
                         <Button variant="outline" asChild>
                             <Link href="/comunicaciones">
@@ -37,6 +39,7 @@ export default function Create({
 
                 <CommunicationCreateForm
                     counters={counters}
+                    communication_types={communication_types}
                     current_area={current_area}
                     year={year}
                 />

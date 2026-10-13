@@ -7,11 +7,12 @@ use App\Models\AreaNumberCounter;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class NumberingTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private function admin(): User
     {
@@ -65,14 +66,15 @@ class NumberingTest extends TestCase
     public function test_set_number_creates_missing_counter_row(): void
     {
         $area = $this->area();
+        $type = $this->communicationType();
 
         $this->actingAs($this->admin())->post("/admin/numbering/{$area->id}", [
-            'type' => 'ci',
+            'communication_type_id' => $type->id,
             'value' => 41,
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(41, (int) AreaNumberCounter::where('area_id', $area->id)
-            ->where('type', 'ci')
+            ->where('communication_type_id', $type->id)
             ->where('year', now()->year)
             ->value('last_sequence'));
     }
@@ -81,16 +83,17 @@ class NumberingTest extends TestCase
     {
         $admin = $this->admin();
         $area = $this->area();
+        $type = $this->communicationType('of');
 
         AreaNumberCounter::create([
             'area_id' => $area->id,
-            'type' => 'of',
+            'communication_type_id' => $type->id,
             'year' => now()->year,
             'last_sequence' => 30,
         ]);
 
         \App\Models\Communication::create([
-            'type' => 'of',
+            'communication_type_id' => $type->id,
             'number' => 'of.carto.0030/'.now()->year,
             'year' => now()->year,
             'sequence' => 30,
@@ -102,7 +105,7 @@ class NumberingTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->post("/admin/numbering/{$area->id}", [
-            'type' => 'of',
+            'communication_type_id' => $type->id,
             'value' => 10,
         ]);
 
@@ -110,7 +113,7 @@ class NumberingTest extends TestCase
         $response->assertSessionHas('error');
 
         $this->assertSame(30, (int) AreaNumberCounter::where('area_id', $area->id)
-            ->where('type', 'of')
+            ->where('communication_type_id', $type->id)
             ->where('year', now()->year)
             ->value('last_sequence'));
     }
@@ -118,15 +121,16 @@ class NumberingTest extends TestCase
     public function test_set_number_below_issued_passes_with_force(): void
     {
         $area = $this->area();
+        $type = $this->communicationType();
 
         $this->actingAs($this->admin())->post("/admin/numbering/{$area->id}", [
-            'type' => 'ci',
+            'communication_type_id' => $type->id,
             'value' => 5,
             'force' => true,
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(5, (int) AreaNumberCounter::where('area_id', $area->id)
-            ->where('type', 'ci')
+            ->where('communication_type_id', $type->id)
             ->where('year', now()->year)
             ->value('last_sequence'));
     }

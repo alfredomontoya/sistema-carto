@@ -65,8 +65,8 @@ export function CommunicationEditForm({
             <CardContent className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-base font-semibold uppercase">{communication.number}</span>
-                    <Badge variant={communication.type === 'ci' ? 'secondary' : 'outline'}>
-                        {communication.type === 'ci' ? 'Comunicación interna' : 'Oficio externo'}
+                    <Badge variant="secondary">
+                        {communication.communication_type?.name ?? communication.type ?? '—'}
                     </Badge>
                     <Badge variant="secondary">{communication.area?.name ?? '—'}</Badge>
                 </div>

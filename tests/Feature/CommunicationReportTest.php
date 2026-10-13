@@ -10,11 +10,12 @@ use App\Models\User;
 use App\Services\CommunicationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class CommunicationReportTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private function makeArea(string $code, string $name): Area
     {
@@ -60,7 +61,7 @@ class CommunicationReportTest extends TestCase
         $service = app(CommunicationService::class);
 
         $service->create($author->fresh(), [
-            'type' => Communication::TYPE_INTERNAL,
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => 'Ref '.$number,
             'recipient_name' => 'Dest',
             'recipient_position' => 'TECNICO',

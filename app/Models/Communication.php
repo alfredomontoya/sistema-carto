@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'type',
+    'communication_type_id',
     'number',
     'year',
     'sequence',
@@ -33,10 +33,6 @@ class Communication extends Model
     /** @use HasFactory<CommunicationFactory> */
     use HasFactory, HasUuids;
 
-    public const TYPE_INTERNAL = 'ci';
-
-    public const TYPE_EXTERNAL = 'of';
-
     public const STATUS_ACTIVE = 'activo';
 
     public const STATUS_ANNULLED = 'anulado';
@@ -45,6 +41,21 @@ class Communication extends Model
         'year' => 'integer',
         'sequence' => 'integer',
     ];
+
+    public function communicationType(): BelongsTo
+    {
+        return $this->belongsTo(CommunicationType::class, 'communication_type_id');
+    }
+
+    /**
+     * Legacy reader: the type code (e.g. "ci") resolved through the
+     * communication type. Kept for the PDF report and backwards
+     * compatibility; not mass-assignable.
+     */
+    public function getTypeAttribute(): ?string
+    {
+        return $this->communicationType?->code;
+    }
 
     public function area(): BelongsTo
     {
@@ -100,7 +111,10 @@ class Communication extends Model
 
         $query->when(
             $filters['type'] ?? null,
-            fn (Builder $q, string $type) => $q->where('type', $type),
+            function (Builder $q, string $type): void {
+                $id = CommunicationType::where('code', $type)->value('id');
+                $q->where('communication_type_id', $id ?? $type);
+            },
         );
 
         $query->when(

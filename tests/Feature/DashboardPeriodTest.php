@@ -12,11 +12,12 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class DashboardPeriodTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private EloquentCommunicationRepository $repo;
 
@@ -116,7 +117,7 @@ class DashboardPeriodTest extends TestCase
     private function makeCommunication(Carbon $at, ?string $destinoAreaId = null): void
     {
         $communication = Communication::create([
-            'type' => Communication::TYPE_INTERNAL,
+            'communication_type_id' => $this->communicationType()->id,
             'number' => 'ci.carto.0001/2026',
             'year' => 2026,
             'sequence' => 1,

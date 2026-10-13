@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Area;
 use App\Models\Communication;
 use App\Models\AreaNumberCounter;
+use App\Models\CommunicationType;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Database\Seeder;
@@ -58,6 +59,14 @@ class RandomCommunicationsSeeder extends Seeder
         $areas = Area::with('positions')->get()->keyBy('id');
         $numberingAreas = $this->resolveNumberingAreas($areas);
 
+        // Communication types derived on demand (not fixed seeds).
+        $ciType = CommunicationType::firstOrCreate(['code' => 'ci'], [
+            'name' => 'Comunicación interna', 'digits' => 4, 'reset_annually' => true, 'is_active' => true, 'sort_order' => 0,
+        ]);
+        $ofType = CommunicationType::firstOrCreate(['code' => 'of'], [
+            'name' => 'Oficio externo', 'digits' => 4, 'reset_annually' => true, 'is_active' => true, 'sort_order' => 1,
+        ]);
+
         // Secuencias en memoria por área de numeración y tipo, continuando
         // desde el contador persistido para no pisar numeración existente.
         $sequences = [];
@@ -66,29 +75,29 @@ class RandomCommunicationsSeeder extends Seeder
         for ($i = 0; $i < self::COUNT; $i++) {
             // Creador al azar y tipo de documento (70% internas).
             $user = $users->random();
-            $type = fake()->boolean(70) ? Communication::TYPE_INTERNAL : Communication::TYPE_EXTERNAL;
+            $type = fake()->boolean(70) ? $ciType : $ofType;
 
             // Área real del creador y su área de numeración.
             $user->loadMissing('currentAssignment.position.area');
             $area = $user->currentArea;
             $numberingArea = $numberingAreas[$area->id] ?? $area;
 
-            // Siguiente número del correlativo: prefijo.tipo.codigo.secuencia/año.
-            $key = $numberingArea->id . '_' . $type . '_' . $year;
+            // Siguiente número del correlativo: prefijo.codigo.secuencia/año.
+            $key = $numberingArea->id . '_' . $type->id . '_' . $year;
             if (!isset($sequences[$key])) {
                 $sequences[$key] = (int) AreaNumberCounter::where('area_id', $numberingArea->id)
-                    ->where('type', $type)
+                    ->where('communication_type_id', $type->id)
                     ->where('year', $year)
                     ->value('last_sequence') ?? 0;
             }
             $sequences[$key]++;
             $sequence = $sequences[$key];
-            
+
             $areaCode = strtolower($numberingArea->code);
-            $number = sprintf('%s.%s.%04d/%d', $type, $areaCode, $sequence, $year);
-            
-            $payload = $this->payload($type, $users, $user, $numberingArea);
-            $payload['type'] = $type;
+            $number = sprintf('%s.%s.%s/%d', $type->code, $areaCode, str_pad((string) $sequence, $type->digits, '0', STR_PAD_LEFT), $year);
+
+            $payload = $this->payload($type->code, $users, $user, $numberingArea);
+            $payload['communication_type_id'] = $type->id;
             $payload['number'] = $number;
             $payload['year'] = $year;
             $payload['sequence'] = $sequence;
@@ -114,14 +123,14 @@ class RandomCommunicationsSeeder extends Seeder
                 $summary['anuladas']++;
             }
 
-            $summary[$type]++;
+            $summary[$type->code]++;
         }
 
         // Sincroniza los contadores persistidos con lo generado.
         foreach ($sequences as $key => $sequence) {
-            [$areaId, $type, $yearStr] = explode('_', $key);
+            [$areaId, $typeId, $yearStr] = explode('_', $key);
             AreaNumberCounter::updateOrCreate(
-                ['area_id' => $areaId, 'type' => $type, 'year' => (int)$yearStr],
+                ['area_id' => $areaId, 'communication_type_id' => $typeId, 'year' => (int)$yearStr],
                 ['last_sequence' => $sequence],
             );
         }

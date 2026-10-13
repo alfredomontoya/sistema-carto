@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'area_id',
+    'communication_type_id',
     'year',
-    'type',
     'last_sequence',
 ])]
 class AreaNumberCounter extends Model
@@ -28,5 +28,10 @@ class AreaNumberCounter extends Model
     public function area(): BelongsTo
     {
         return $this->belongsTo(Area::class);
+    }
+
+    public function communicationType(): BelongsTo
+    {
+        return $this->belongsTo(CommunicationType::class, 'communication_type_id');
     }
 }

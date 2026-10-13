@@ -6,6 +6,7 @@ use App\Models\Communication;
 use App\Models\User;
 use App\Repositories\Contracts\AreaRepository;
 use App\Repositories\Contracts\CommunicationRepository;
+use App\Repositories\Contracts\CommunicationTypeRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -25,6 +26,7 @@ class CommunicationService
         private readonly NumberSequenceService $numbers,
         private readonly AreaService $areas,
         private readonly AreaRepository $areaRepository,
+        private readonly CommunicationTypeRepository $types,
     ) {}
 
     /**
@@ -51,8 +53,7 @@ class CommunicationService
 
     /**
      * @return array{
-     *   ci: array{sequence: int, next_number: string|null},
-     *   of: array{sequence: int, next_number: string|null},
+     *   types: array<int, array{id: string, code: string, name: string, sequence: int, next_number: string}>,
      *   numbering_area: array{code: string, name: string}|null
      * }
      */
@@ -64,17 +65,27 @@ class CommunicationService
 
         if ($area === null) {
             return [
-                'ci' => ['sequence' => 0, 'next_number' => null],
-                'of' => ['sequence' => 0, 'next_number' => null],
+                'types' => [],
                 'numbering_area' => null,
             ];
         }
 
         $numbering = $this->numbers->numberingArea($area);
 
+        $types = $this->types->active()->map(function ($type) use ($numbering, $year) {
+            $current = $this->numbers->current($numbering, $type, $year);
+
+            return [
+                'id' => $type->id,
+                'code' => $type->code,
+                'name' => $type->name,
+                'sequence' => $current['sequence'],
+                'next_number' => $current['next_number'],
+            ];
+        })->all();
+
         return [
-            'ci' => $this->numbers->current($numbering, NumberSequenceService::TYPE_INTERNAL, $year),
-            'of' => $this->numbers->current($numbering, NumberSequenceService::TYPE_EXTERNAL, $year),
+            'types' => $types,
             'numbering_area' => $numbering->id !== $area->id
                 ? ['code' => $numbering->code, 'name' => $numbering->name]
                 : null,
@@ -94,14 +105,18 @@ class CommunicationService
         }
 
         $year = now()->year;
-        $type = $data['type'];
+        $type = $this->types->find($data['communication_type_id'] ?? '');
+
+        if ($type === null || ! $type->is_active) {
+            throw new \InvalidArgumentException('El tipo de comunicación no existe o está inactivo.');
+        }
 
         return DB::transaction(function () use ($user, $data, $file, $area, $year, $type): Communication {
             $numbering = $this->numbers->numberingArea($area);
             $next = $this->numbers->next($numbering, $type, $year);
 
             $payload = [
-                'type' => $type,
+                'communication_type_id' => $type->id,
                 'number' => $next['number'],
                 'year' => $year,
                 'sequence' => $next['sequence'],

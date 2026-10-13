@@ -108,7 +108,7 @@ class AreaService
     }
 
     /**
-     * @return array<int, array{area_id: string, area_name: string, area_code: string, ci_current: int, of_current: int, ci_issued_max: int, of_issued_max: int}>
+     * @return array<int, array{area_id: string, area_name: string, area_code: string, types: array<int, array{type_id: string, code: string, name: string, current: int, issued_max: int}>}>
      */
     public function numberingOverview(int $year, ?string $search = null): array
     {
@@ -122,14 +122,14 @@ class AreaService
      *
      * @return bool true when set, false when blocked
      */
-    public function setNumbering(Area $area, string $type, int $value, bool $force = false): bool
+    public function setNumbering(Area $area, string $communicationTypeId, int $value, bool $force = false): bool
     {
         $year = now()->year;
 
-        return DB::transaction(function () use ($area, $type, $value, $year, $force): bool {
+        return DB::transaction(function () use ($area, $communicationTypeId, $value, $year, $force): bool {
             $issuedMax = (int) Communication::where('area_id', $area->id)
                 ->where('year', $year)
-                ->where('type', $type)
+                ->where('communication_type_id', $communicationTypeId)
                 ->lockForUpdate()
                 ->max('sequence');
 
@@ -137,7 +137,7 @@ class AreaService
                 return false;
             }
 
-            $this->numbers->setSequence($area, $type, $year, $value);
+            $this->numbers->setSequence($area, $communicationTypeId, $year, $value);
 
             return true;
         });

@@ -47,8 +47,8 @@ export function CommunicationShowDialog({
                     <DialogTitle className="flex flex-wrap items-center gap-2">
                         {c !== null && (
                             <>
-                                <Badge variant={c.type === 'ci' ? 'secondary' : 'outline'}>
-                                    {c.type === 'ci' ? 'Comunicación interna' : 'Oficio externo'}
+                                <Badge variant="secondary">
+                                    {c.communication_type?.name ?? c.type ?? '—'}
                                 </Badge>
                                 <Badge variant={c.status === 'activo' ? 'success' : 'warning'}>
                                     {c.status === 'activo' ? 'Activo' : 'Anulado'}

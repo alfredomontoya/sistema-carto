@@ -9,11 +9,12 @@ use App\Models\User;
 use App\Services\UserService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\HasCommunicationTypes;
 use Tests\TestCase;
 
 class SanitizationTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasCommunicationTypes, RefreshDatabase;
 
     private function admin(): User
     {
@@ -87,7 +88,7 @@ class SanitizationTest extends TestCase
     public function test_communication_store_collapses_spaces(): void
     {
         $this->actingAs($this->admin())->post('/comunicaciones', [
-            'type' => 'ci',
+            'communication_type_id' => $this->communicationType()->id,
             'reference' => '  Motivo   con   espacios  ',
             'recipient_name' => '  Destinatario   Prueba  ',
             'recipient_position' => '  TECNICO  ',
