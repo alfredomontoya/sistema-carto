@@ -83,6 +83,9 @@ Route::middleware(['auth', RequirePasswordChange::class])->group(function () {
         Route::post('numbering/{area}', [NumberingController::class, 'setNumber'])
             ->middleware('permission:manage areas')
             ->name('numbering.set');
+        Route::post('numbering/{area}/reset', [NumberingController::class, 'resetAll'])
+            ->middleware('permission:manage areas')
+            ->name('numbering.reset');
 
         Route::resource('communication-types', CommunicationTypeController::class)
             ->only(['index', 'store', 'update', 'destroy'])

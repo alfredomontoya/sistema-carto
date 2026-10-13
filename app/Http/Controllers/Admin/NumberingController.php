@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetAreaNumberingRequest;
 use App\Http\Requests\Admin\SetAreaNumberingRequest;
 use App\Services\AreaService;
 use App\Services\CommunicationTypeService;
@@ -55,5 +56,27 @@ class NumberingController extends Controller
 
         return redirect()->route('admin.numbering.index')
             ->with('success', "Numeración de {$type->name} de {$area->name} fijada en {$value}.");
+    }
+
+    public function resetAll(ResetAreaNumberingRequest $request, string $id): RedirectResponse
+    {
+        $area = $this->areas->find($id);
+
+        if ($area === null) {
+            abort(404);
+        }
+
+        $typeIds = $request->validated('types') ?? [];
+        $force = $request->boolean('force');
+
+        $reset = $this->areas->resetNumbering($area, $typeIds, $force);
+
+        if (! $reset) {
+            return redirect()->route('admin.numbering.index')
+                ->with('error', "No se puede reiniciar {$area->name}: ya se emitieron números este año. Usa forzar para continuar.");
+        }
+
+        return redirect()->route('admin.numbering.index')
+            ->with('success', "Numeración de {$area->name} reiniciada: el siguiente correlativo será el 1.");
     }
 }

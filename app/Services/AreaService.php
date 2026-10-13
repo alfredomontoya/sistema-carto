@@ -116,6 +116,39 @@ class AreaService
     }
 
     /**
+     * Reset the numbering of an area back to zero for the current year.
+     * When no type ids are given, every communication type is reset.
+     * Refuses when numbers were already issued in the selected scope
+     * (they could duplicate correlatives), unless forced.
+     *
+     * @param  array<int, string>  $communicationTypeIds
+     * @return bool true when reset, false when blocked
+     */
+    public function resetNumbering(Area $area, array $communicationTypeIds = [], bool $force = false): bool
+    {
+        $year = now()->year;
+
+        return DB::transaction(function () use ($area, $communicationTypeIds, $year, $force): bool {
+            $issuedQuery = Communication::where('area_id', $area->id)
+                ->where('year', $year);
+
+            if ($communicationTypeIds !== []) {
+                $issuedQuery->whereIn('communication_type_id', $communicationTypeIds);
+            }
+
+            $issuedMax = (int) $issuedQuery->lockForUpdate()->max('sequence');
+
+            if ($issuedMax > 0 && ! $force) {
+                return false;
+            }
+
+            $this->numbers->resetForYear($area, $year, $communicationTypeIds);
+
+            return true;
+        });
+    }
+
+    /**
      * Set the numbering of an area/type to an explicit value for the current
      * year. Refuses when the value is at or below the highest sequence
      * already issued (it would duplicate correlatives), unless forced.

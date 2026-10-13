@@ -85,8 +85,8 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 
 - `areas.reset_annually` (boolean, default `true`): controla si la secuencia reinicia en `0001` cada año (`ci.carto.0001/2027`) o continúa del año previo (`ci.carto.0011/2027`).
 - El fallback "continuar" en `EloquentNumberCounterRepository` solo aplica cuando **no existe fila del año**.
-- **Reinicio manual**: `POST admin/areas/{area}/reset-numbering`. Por defecto queda bloqueado si el año actual ya emitió números para esa área o para áreas que numeran como ella.
-- El request valida `types` (`ci`/`of`, mínimo 1, Form Request `ResetAreaNumberingRequest`) y acepta `force` (switch "Reiniciar de todos modos" en `/admin/areas`).
+- **Reinicio manual**: `POST admin/numbering/{area}/reset`. Acepta `types` (array de IDs, opcional; vacío = todos los tipos) y `force` (switch "Forzar de todos modos" en `/admin/numbering`, botón "Reiniciar todos" por área). Por defecto queda bloqueado si el año actual ya emitió números en el alcance elegido.
+- El request valida `types` (IDs de `type_communications`, opcional) y acepta `force` (switch "Forzar de todos modos" en `/admin/numbering`).
 - Con `force=true` reinicia igual conservando las comunicaciones: los nuevos correlativos **pueden duplicar** números ya emitidos (`communications.number` ya no es única; solo índice).
 - `NumberSequenceService::resetForYear` / `resetAll` resetean contadores.
 

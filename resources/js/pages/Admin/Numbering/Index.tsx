@@ -46,6 +46,12 @@ interface ConfirmTarget {
     issuedMax: number;
 }
 
+interface ResetTarget {
+    area_id: string;
+    area_name: string;
+    types: NumberingTypeState[];
+}
+
 function TypeCell({
     current,
     issuedMax,
@@ -109,6 +115,9 @@ export default function NumberingIndex({
     const [target, setTarget] = useState<ConfirmTarget | null>(null);
     const [force, setForce] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [resetTarget, setResetTarget] = useState<ResetTarget | null>(null);
+    const [resetForce, setResetForce] = useState(false);
+    const [resetting, setResetting] = useState(false);
 
     const typeColumns: { type_id: string; code: string; name: string }[] = [];
     for (const row of rows) {
@@ -137,7 +146,12 @@ export default function NumberingIndex({
         setForce(false);
     }, [target]);
 
+    useEffect(() => {
+        setResetForce(false);
+    }, [resetTarget]);
+
     const risky = target !== null && target.value <= target.issuedMax;
+    const resetRisky = resetTarget !== null && resetTarget.types.some((t) => t.issued_max > 0);
 
     const confirm = () => {
         if (!target) return;
@@ -150,6 +164,20 @@ export default function NumberingIndex({
             onFinish: () => {
                 setSaving(false);
                 setTarget(null);
+            },
+        });
+    };
+
+    const confirmReset = () => {
+        if (!resetTarget) return;
+        setResetting(true);
+        router.post(route('admin.numbering.reset', resetTarget.area_id), {
+            types: [],
+            force: resetRisky ? resetForce : false,
+        }, {
+            onFinish: () => {
+                setResetting(false);
+                setResetTarget(null);
             },
         });
     };
@@ -207,6 +235,20 @@ export default function NumberingIndex({
                                             <p className="font-mono text-xs text-muted-foreground">
                                                 {row.area_code}
                                             </p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="mt-2"
+                                                onClick={() =>
+                                                    setResetTarget({
+                                                        area_id: row.area_id,
+                                                        area_name: row.area_name,
+                                                        types: row.types,
+                                                    })
+                                                }
+                                            >
+                                                <RotateCcw className="h-3.5 w-3.5" /> Reiniciar todos
+                                            </Button>
                                         </TableCell>
                                         {typeColumns.map((c) => {
                                             const state = stateFor(row, c.type_id);
@@ -282,6 +324,55 @@ export default function NumberingIndex({
                             {saving ? 'Guardando…' : 'Confirmar'}
                         </Button>
                         {!risky && (
+                            <Badge variant="secondary" className="self-center">
+                                Sin riesgo
+                            </Badge>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={resetTarget !== null} onOpenChange={(o) => !o && setResetTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            Reiniciar todos los tipos de {resetTarget?.area_name}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Se <strong>reiniciarán</strong> todos los tipos a cero: el siguiente
+                            correlativo de cada uno será el <strong>1</strong>. Las comunicaciones
+                            ya emitidas se conservan.
+                            <span className="mt-2 block space-y-1">
+                                {resetTarget?.types.map((t) => (
+                                    <span key={t.type_id} className="flex justify-between font-mono text-xs">
+                                        <span>{t.code} · {t.name}</span>
+                                        <span>actual: {t.current} · emitido: {t.issued_max}</span>
+                                    </span>
+                                ))}
+                            </span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {resetRisky && (
+                        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                            <p className="font-medium text-destructive">
+                                Riesgo de duplicados: ya se emitieron números este año.
+                            </p>
+                            <label className="mt-2 flex items-center gap-2">
+                                <Switch checked={resetForce} onCheckedChange={setResetForce} />
+                                Forzar de todos modos
+                            </label>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setResetTarget(null)}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={confirmReset} disabled={resetting || (resetRisky && !resetForce)}>
+                            {resetting ? 'Reiniciando…' : 'Reiniciar todos'}
+                        </Button>
+                        {!resetRisky && (
                             <Badge variant="secondary" className="self-center">
                                 Sin riesgo
                             </Badge>

@@ -134,4 +134,105 @@ class NumberingTest extends TestCase
             ->where('year', now()->year)
             ->value('last_sequence'));
     }
+
+    public function test_reset_all_types_sets_every_counter_to_zero(): void
+    {
+        $area = $this->area();
+        $ci = $this->communicationType();
+        $of = $this->communicationType('of');
+
+        foreach ([$ci, $of] as $type) {
+            AreaNumberCounter::create([
+                'area_id' => $area->id,
+                'communication_type_id' => $type->id,
+                'year' => now()->year,
+                'last_sequence' => 12,
+            ]);
+        }
+
+        $this->actingAs($this->admin())->post("/admin/numbering/{$area->id}/reset", [
+            'types' => [$ci->id, $of->id],
+        ])->assertSessionHasNoErrors();
+
+        foreach ([$ci, $of] as $type) {
+            $this->assertSame(0, (int) AreaNumberCounter::where('area_id', $area->id)
+                ->where('communication_type_id', $type->id)
+                ->where('year', now()->year)
+                ->value('last_sequence'));
+        }
+    }
+
+    public function test_reset_all_is_blocked_when_numbers_were_issued_without_force(): void
+    {
+        $admin = $this->admin();
+        $area = $this->area();
+        $type = $this->communicationType();
+
+        AreaNumberCounter::create([
+            'area_id' => $area->id,
+            'communication_type_id' => $type->id,
+            'year' => now()->year,
+            'last_sequence' => 7,
+        ]);
+
+        \App\Models\Communication::create([
+            'communication_type_id' => $type->id,
+            'number' => 'ci.carto.0007/'.now()->year,
+            'year' => now()->year,
+            'sequence' => 7,
+            'area_id' => $area->id,
+            'user_id' => $admin->id,
+            'reference' => 'Ref',
+            'recipient_name' => 'Dest',
+            'status' => 'activo',
+        ]);
+
+        $response = $this->actingAs($admin)->post("/admin/numbering/{$area->id}/reset", [
+            'types' => [],
+        ]);
+
+        $response->assertRedirect(route('admin.numbering.index'));
+        $response->assertSessionHas('error');
+
+        $this->assertSame(7, (int) AreaNumberCounter::where('area_id', $area->id)
+            ->where('communication_type_id', $type->id)
+            ->where('year', now()->year)
+            ->value('last_sequence'));
+    }
+
+    public function test_reset_all_with_force_passes_despite_issued_numbers(): void
+    {
+        $admin = $this->admin();
+        $area = $this->area();
+        $type = $this->communicationType();
+
+        AreaNumberCounter::create([
+            'area_id' => $area->id,
+            'communication_type_id' => $type->id,
+            'year' => now()->year,
+            'last_sequence' => 7,
+        ]);
+
+        \App\Models\Communication::create([
+            'communication_type_id' => $type->id,
+            'number' => 'ci.carto.0007/'.now()->year,
+            'year' => now()->year,
+            'sequence' => 7,
+            'area_id' => $area->id,
+            'user_id' => $admin->id,
+            'reference' => 'Ref',
+            'recipient_name' => 'Dest',
+            'status' => 'activo',
+        ]);
+
+        $this->actingAs($admin)->post("/admin/numbering/{$area->id}/reset", [
+            'types' => [],
+            'force' => true,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(0, (int) AreaNumberCounter::where('area_id', $area->id)
+            ->where('communication_type_id', $type->id)
+            ->where('year', now()->year)
+            ->value('last_sequence'));
+    }
 }
