@@ -49,17 +49,22 @@ interface ConfirmTarget {
 interface ResetTarget {
     area_id: string;
     area_name: string;
+    type_ids: string[];
     types: NumberingTypeState[];
 }
 
 function TypeCell({
+    typeId,
     current,
     issuedMax,
     onConfirm,
+    onReset,
 }: {
+    typeId: string;
     current: number;
     issuedMax: number;
     onConfirm: (value: number, issuedMax: number) => void;
+    onReset: (typeId: string) => void;
 }) {
     const [value, setValue] = useState('');
 
@@ -92,8 +97,8 @@ function TypeCell({
                 <Button
                     variant="ghost"
                     size="sm"
-                    title="Reiniciar (el siguiente será el 1)"
-                    onClick={() => onConfirm(0, issuedMax)}
+                    title="Reiniciar este tipo (el siguiente será el 1)"
+                    onClick={() => onReset(typeId)}
                 >
                     <RotateCcw className="h-3.5 w-3.5" /> 1
                 </Button>
@@ -172,13 +177,32 @@ export default function NumberingIndex({
         if (!resetTarget) return;
         setResetting(true);
         router.post(route('admin.numbering.reset', resetTarget.area_id), {
-            types: [],
+            types: resetTarget.type_ids,
             force: resetRisky ? resetForce : false,
         }, {
             onFinish: () => {
                 setResetting(false);
                 setResetTarget(null);
             },
+        });
+    };
+
+    const openResetAll = (row: NumberingRow) =>
+        setResetTarget({
+            area_id: row.area_id,
+            area_name: row.area_name,
+            type_ids: [],
+            types: row.types,
+        });
+
+    const openResetType = (row: NumberingRow, type_id: string) => {
+        const state = row.types.find((t) => t.type_id === type_id);
+        if (!state) return;
+        setResetTarget({
+            area_id: row.area_id,
+            area_name: row.area_name,
+            type_ids: [type_id],
+            types: [state],
         });
     };
 
@@ -239,13 +263,7 @@ export default function NumberingIndex({
                                                 variant="outline"
                                                 size="sm"
                                                 className="mt-2"
-                                                onClick={() =>
-                                                    setResetTarget({
-                                                        area_id: row.area_id,
-                                                        area_name: row.area_name,
-                                                        types: row.types,
-                                                    })
-                                                }
+                                                onClick={() => openResetAll(row)}
                                             >
                                                 <RotateCcw className="h-3.5 w-3.5" /> Reiniciar todos
                                             </Button>
@@ -255,6 +273,7 @@ export default function NumberingIndex({
                                             return (
                                                 <TableCell key={c.type_id}>
                                                     <TypeCell
+                                                        typeId={c.type_id}
                                                         current={state?.current ?? 0}
                                                         issuedMax={state?.issued_max ?? 0}
                                                         onConfirm={(value, issuedMax) =>
@@ -268,6 +287,7 @@ export default function NumberingIndex({
                                                                 issuedMax,
                                                             })
                                                         }
+                                                        onReset={(typeId) => openResetType(row, typeId)}
                                                     />
                                                 </TableCell>
                                             );
@@ -336,11 +356,13 @@ export default function NumberingIndex({
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            Reiniciar todos los tipos de {resetTarget?.area_name}
+                            {resetTarget !== null && resetTarget.type_ids.length === 1
+                                ? `Reiniciar ${resetTarget.types[0]?.name ?? ''} de ${resetTarget.area_name}`
+                                : `Reiniciar todos los tipos de ${resetTarget?.area_name}`}
                         </DialogTitle>
                         <DialogDescription>
-                            Se <strong>reiniciarán</strong> todos los tipos a cero: el siguiente
-                            correlativo de cada uno será el <strong>1</strong>. Las comunicaciones
+                            Se <strong>reiniciará(n)</strong> a cero: el siguiente
+                            correlativo de cada tipo listado será el <strong>1</strong>. Las comunicaciones
                             ya emitidas se conservan.
                             <span className="mt-2 block space-y-1">
                                 {resetTarget?.types.map((t) => (
@@ -370,7 +392,7 @@ export default function NumberingIndex({
                             Cancelar
                         </Button>
                         <Button onClick={confirmReset} disabled={resetting || (resetRisky && !resetForce)}>
-                            {resetting ? 'Reiniciando…' : 'Reiniciar todos'}
+                            {resetting ? 'Reiniciando…' : resetTarget !== null && resetTarget.type_ids.length === 1 ? 'Reiniciar tipo' : 'Reiniciar todos'}
                         </Button>
                         {!resetRisky && (
                             <Badge variant="secondary" className="self-center">

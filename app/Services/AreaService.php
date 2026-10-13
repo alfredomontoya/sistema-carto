@@ -166,7 +166,7 @@ class AreaService
                 ->lockForUpdate()
                 ->max('sequence');
 
-            if ($value <= $issuedMax && ! $force) {
+            if ($issuedMax > 0 && $value <= $issuedMax && ! $force) {
                 return false;
             }
 

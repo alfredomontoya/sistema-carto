@@ -235,4 +235,33 @@ class NumberingTest extends TestCase
             ->where('year', now()->year)
             ->value('last_sequence'));
     }
+
+    public function test_reset_subset_only_resets_the_given_types(): void
+    {
+        $area = $this->area();
+        $ci = $this->communicationType();
+        $of = $this->communicationType('of');
+
+        foreach ([$ci, $of] as $type) {
+            AreaNumberCounter::create([
+                'area_id' => $area->id,
+                'communication_type_id' => $type->id,
+                'year' => now()->year,
+                'last_sequence' => 9,
+            ]);
+        }
+
+        $this->actingAs($this->admin())->post("/admin/numbering/{$area->id}/reset", [
+            'types' => [$ci->id],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(0, (int) AreaNumberCounter::where('area_id', $area->id)
+            ->where('communication_type_id', $ci->id)
+            ->where('year', now()->year)
+            ->value('last_sequence'));
+        $this->assertSame(9, (int) AreaNumberCounter::where('area_id', $area->id)
+            ->where('communication_type_id', $of->id)
+            ->where('year', now()->year)
+            ->value('last_sequence'));
+    }
 }
