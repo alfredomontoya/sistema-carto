@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { DatabaseBackup, Download, HardDrive, Plus, RotateCcw, TriangleAlert } from 'lucide-react';
+import { DatabaseBackup, Download, HardDrive, Plus, RotateCcw, TriangleAlert, Upload } from 'lucide-react';
 import * as React from 'react';
 import { FlashMessages } from '@/components/FlashMessages';
 import { PageHeader } from '@/components/PageHeader';
@@ -69,6 +69,10 @@ export default function BackupsIndex({
     const settings = useForm({ drive: destination.drive ?? '', max });
     const generate = useForm({});
     const restore = useForm({ file: '', confirm: false });
+    const upload = useForm<{ backup_file: File | null; confirm: boolean }>({
+        backup_file: null,
+        confirm: false,
+    });
     const [restoreTarget, setRestoreTarget] = React.useState<BackupRow | null>(null);
 
     const saveSettings = (e: React.FormEvent) => {
@@ -86,6 +90,15 @@ export default function BackupsIndex({
         restore.post(route('admin.backups.restore'), {
             preserveScroll: true,
             onSuccess: () => setRestoreTarget(null),
+        });
+    };
+
+    const doUploadRestore = (e: React.FormEvent) => {
+        e.preventDefault();
+        upload.post(route('admin.backups.upload-restore'), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => upload.reset(),
         });
     };
 
@@ -203,6 +216,68 @@ export default function BackupsIndex({
 
                             <Button type="submit" disabled={settings.processing}>
                                 {settings.processing ? 'Guardando…' : 'Guardar configuración'}
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Upload className="h-4 w-4 text-muted-foreground" /> Restaurar archivo
+                            externo
+                        </CardTitle>
+                        <CardDescription>
+                            Sube un respaldo .sql o .sql.gz descargado antes y restáuralo en la base de
+                            datos actual. Reemplaza todos los datos y no se puede deshacer.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={doUploadRestore} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="backup_file">Archivo de respaldo</Label>
+                                <Input
+                                    id="backup_file"
+                                    type="file"
+                                    accept=".sql,.gz"
+                                    onChange={(e) =>
+                                        upload.setData('backup_file', e.target.files?.[0] ?? null)
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Formatos aceptados: .sql y .gz (máx. 100 MB).
+                                    {upload.data.backup_file
+                                        ? ` Seleccionado: ${upload.data.backup_file.name}`
+                                        : ''}
+                                </p>
+                                {upload.errors.backup_file && (
+                                    <p className="text-sm text-destructive">
+                                        {upload.errors.backup_file}
+                                    </p>
+                                )}
+                            </div>
+                            <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                    checked={upload.data.confirm}
+                                    onCheckedChange={(v) => upload.setData('confirm', v === true)}
+                                />
+                                <span>
+                                    Entiendo que se perderán los datos actuales y deseo continuar con la
+                                    restauración.
+                                </span>
+                            </label>
+                            {upload.errors.confirm && (
+                                <p className="text-sm text-destructive">{upload.errors.confirm}</p>
+                            )}
+                            <Button
+                                type="submit"
+                                variant="destructive"
+                                disabled={
+                                    upload.processing || !upload.data.confirm || !upload.data.backup_file
+                                }
+                            >
+                                <RotateCcw />
+                                {upload.processing ? 'Restaurando…' : 'Restaurar archivo'}
                             </Button>
                         </form>
                     </CardContent>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\Contracts\SettingsRepository;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -104,6 +105,54 @@ class DatabaseBackupService
             $this->restoreSqlite($path);
         } else {
             $this->restoreMysql($path);
+        }
+
+        DB::table('sessions')->delete();
+        Cache::flush();
+    }
+
+    public function restoreUploadedFile(UploadedFile $file): void
+    {
+        $name = strtolower($file->getClientOriginalName());
+
+        if (! str_ends_with($name, '.sql') && ! str_ends_with($name, '.gz')) {
+            throw new \InvalidArgumentException('El archivo debe ser .sql o .gz.');
+        }
+
+        $raw = file_get_contents($file->getRealPath() ?: '');
+
+        if ($raw === false || $raw === '') {
+            throw new \RuntimeException('El archivo está vacío o es ilegible.');
+        }
+
+        if (str_ends_with($name, '.gz')) {
+            $decoded = @gzdecode($raw);
+
+            if (! is_string($decoded) || trim($decoded) === '') {
+                throw new \RuntimeException('El archivo .gz está vacío o es ilegible.');
+            }
+
+            $raw = $decoded;
+        }
+
+        $driver = (string) config('database.default');
+
+        if ($driver === 'sqlite' && str_starts_with($raw, 'SQLite format 3')) {
+            $tmp = tempnam(sys_get_temp_dir(), 'carto-restore-');
+
+            if ($tmp === false) {
+                throw new \RuntimeException('No se pudo procesar el archivo.');
+            }
+
+            file_put_contents($tmp, $raw);
+            $this->restoreSqlite($tmp);
+            @unlink($tmp);
+        } else {
+            if (trim($raw) === '') {
+                throw new \RuntimeException('El respaldo está vacío o es ilegible.');
+            }
+
+            $this->dumper->restore($raw);
         }
 
         DB::table('sessions')->delete();

@@ -22,6 +22,8 @@ class CommunicationAreaFilterTest extends TestCase
 
     private Area $taes;
 
+    private User $basic;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,10 +43,10 @@ class CommunicationAreaFilterTest extends TestCase
         ]);
 
         $this->admin = $this->makeUser('admin-test@example.com', 'jefe', $this->carto, 'administrador');
-        $this->makeUser('demo-taes@example.com', 'tecnico', $this->taes, 'usuario');
+        $this->basic = $this->makeUser('demo-taes@example.com', 'tecnico', $this->taes, 'usuario');
     }
 
-    public function test_defaults_to_the_users_area(): void
+    public function test_admin_defaults_to_all_records(): void
     {
         $this->createCommunication($this->carto, 'ci', 'ci.carto.0001/2026');
         $this->createCommunication($this->taes, 'ci', 'ci.taes.0001/2026');
@@ -54,10 +56,44 @@ class CommunicationAreaFilterTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('Communications/Index')
             ->has('areas', 2)
-            ->where('filters.area_id', $this->carto->id)
+            ->where('filters.area_id', 'all')
+            ->where('is_admin', true)
+            ->reloadOnly('communications', function ($page) {
+                $page->has('communications', 2);
+            })
+        );
+    }
+
+    public function test_basic_user_is_scoped_to_own_area(): void
+    {
+        $this->createCommunication($this->carto, 'ci', 'ci.carto.0001/2026');
+        $this->createCommunication($this->taes, 'ci', 'ci.taes.0001/2026');
+
+        $response = $this->actingAs($this->basic)->get('/comunicaciones');
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('Communications/Index')
+            ->where('filters.area_id', $this->taes->id)
+            ->where('is_admin', false)
             ->reloadOnly('communications', function ($page) {
                 $page->has('communications', 1)
-                    ->where('communications.0.area.code', 'carto');
+                    ->where('communications.0.area.code', 'taes');
+            })
+        );
+    }
+
+    public function test_basic_user_cannot_bypass_area_with_all(): void
+    {
+        $this->createCommunication($this->carto, 'ci', 'ci.carto.0001/2026');
+        $this->createCommunication($this->taes, 'ci', 'ci.taes.0001/2026');
+
+        $response = $this->actingAs($this->basic)->get('/comunicaciones?area_id=all');
+
+        $response->assertInertia(fn ($page) => $page
+            ->where('filters.area_id', $this->taes->id)
+            ->reloadOnly('communications', function ($page) {
+                $page->has('communications', 1)
+                    ->where('communications.0.area.code', 'taes');
             })
         );
     }

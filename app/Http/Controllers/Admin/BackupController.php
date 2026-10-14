@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RestoreBackupRequest;
 use App\Http\Requests\Admin\UpdateBackupSettingsRequest;
+use App\Http\Requests\Admin\UploadBackupRequest;
 use App\Services\DatabaseBackupService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -56,6 +57,21 @@ class BackupController extends Controller
 
         return redirect()->route('admin.backups.index')
             ->with('success', 'Respaldo restaurado correctamente. Vuelve a iniciar sesión si es necesario.');
+    }
+
+    public function uploadRestore(UploadBackupRequest $request): RedirectResponse
+    {
+        try {
+            /** @var \Illuminate\Http\UploadedFile $uploaded */
+            $uploaded = $request->file('backup_file');
+            $this->backups->restoreUploadedFile($uploaded);
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.backups.index')
+                ->with('error', 'No se pudo restaurar el archivo: '.$e->getMessage());
+        }
+
+        return redirect()->route('admin.backups.index')
+            ->with('success', 'Archivo restaurado correctamente. Vuelve a iniciar sesión si es necesario.');
     }
 
     public function update(UpdateBackupSettingsRequest $request): RedirectResponse

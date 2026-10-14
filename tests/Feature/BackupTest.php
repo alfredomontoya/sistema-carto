@@ -111,6 +111,38 @@ class BackupTest extends TestCase
         ])->assertSessionHas('error');
     }
 
+    public function test_upload_restore_requires_permission(): void
+    {
+        $file = \Illuminate\Http\UploadedFile::fake()->create('respaldo.sql', 10, 'application/sql');
+
+        $this->actingAs($this->basicUser())->post('/admin/backups/restaurar-archivo', [
+            'backup_file' => $file,
+            'confirm' => true,
+        ])->assertForbidden();
+    }
+
+    public function test_upload_restore_validates_file_and_confirmation(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->post('/admin/backups/restaurar-archivo', [
+            'confirm' => true,
+        ])->assertSessionHasErrors('backup_file');
+
+        $sql = \Illuminate\Http\UploadedFile::fake()->create('respaldo.sql', 10, 'application/sql');
+
+        $this->actingAs($admin)->post('/admin/backups/restaurar-archivo', [
+            'backup_file' => $sql,
+        ])->assertSessionHasErrors('confirm');
+
+        $txt = \Illuminate\Http\UploadedFile::fake()->create('notas.txt', 10, 'text/plain');
+
+        $this->actingAs($admin)->post('/admin/backups/restaurar-archivo', [
+            'backup_file' => $txt,
+            'confirm' => true,
+        ])->assertSessionHasErrors('backup_file');
+    }
+
     public function test_update_settings_validates_drive(): void
     {
         $admin = $this->admin();

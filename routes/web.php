@@ -66,6 +66,9 @@ Route::middleware(['auth', RequirePasswordChange::class])->group(function () {
         Route::post('backups/restaurar', [BackupController::class, 'restore'])
             ->middleware('permission:manage backups')
             ->name('backups.restore');
+        Route::post('backups/restaurar-archivo', [BackupController::class, 'uploadRestore'])
+            ->middleware('permission:manage backups')
+            ->name('backups.upload-restore');
         Route::put('backups/ajustes', [BackupController::class, 'update'])
             ->middleware('permission:manage backups')
             ->name('backups.update');

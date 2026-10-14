@@ -43,9 +43,16 @@ class CommunicationController extends Controller
             'status',
         ]);
 
-        if (! array_key_exists('area_id', $filters)) {
-            $request->user()->loadMissing('currentAssignment.position.area');
-            $filters['area_id'] = $request->user()->currentArea?->id ?? 'all';
+        $user = $request->user();
+        $user->loadMissing('currentAssignment.position.area');
+        $isAdmin = $user->seesGlobalStats();
+
+        if ($isAdmin) {
+            if (! array_key_exists('area_id', $filters) || $filters['area_id'] === '') {
+                $filters['area_id'] = 'all';
+            }
+        } else {
+            $filters['area_id'] = $user->currentArea?->id ?? 'none';
         }
 
         $perPage = min((int) $request->integer('per_page', 10), 50);
@@ -55,15 +62,14 @@ class CommunicationController extends Controller
             $perPage,
         );
 
-        $request->user()->loadMissing('currentAssignment.position.area');
-        $isAdmin = $request->user()->seesGlobalStats();
-
         return Inertia::render('Communications/Index', [
             'areas' => AreaResource::collection($this->areas->all())->resolve(),
             'filters' => $filters,
             'counters' => $this->communications->countersFor($request->user(), now()->year),
             'communication_types' => CommunicationTypeResource::collection($this->types->active())->resolve(),
             'current_area' => $request->user()->currentArea?->name,
+            'current_area_id' => $request->user()->currentArea?->id,
+            'is_admin' => $isAdmin,
             'year' => now()->year,
             'communications' => CommunicationResource::collection($records, $isAdmin)->resolve(),
             'pagination' => [

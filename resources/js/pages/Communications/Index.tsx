@@ -57,6 +57,8 @@ export default function CommunicationsIndex({
     counters,
     communication_types,
     current_area,
+    current_area_id = null,
+    is_admin = false,
     year,
     created = null,
 }: {
@@ -67,13 +69,18 @@ export default function CommunicationsIndex({
     counters: CountersData;
     communication_types: CommunicationTypeData[];
     current_area: string | null;
+    current_area_id?: string | null;
+    is_admin?: boolean;
     year: number;
     created?: CommunicationData | null;
 }) {
+    const lockedAreaId = is_admin ? null : (filters.area_id ?? current_area_id ?? 'none');
     const [search, setSearch] = React.useState(filters.search ?? '');
     const [type, setType] = React.useState(filters.type ?? '');
     const [status, setStatus] = React.useState(filters.status ?? '');
-    const [areaId, setAreaId] = React.useState(filters.area_id ?? 'all');
+    const [areaId, setAreaId] = React.useState(
+        is_admin ? (filters.area_id ?? 'all') : (filters.area_id ?? current_area_id ?? 'none'),
+    );
     const [dateFrom, setDateFrom] = React.useState(filters.date_from ?? '');
     const [dateTo, setDateTo] = React.useState(filters.date_to ?? '');
     const [annulTarget, setAnnulTarget] = useState<CommunicationData | null>(null);
@@ -105,10 +112,11 @@ export default function CommunicationsIndex({
                 search: search || undefined,
                 type: type || undefined,
                 status: status || undefined,
-                area_id: areaId,
+                area_id: lockedAreaId ?? areaId,
                 date_from: dateFrom || undefined,
                 date_to: dateTo || undefined,
                 ...overrides,
+                ...(lockedAreaId ? { area_id: lockedAreaId } : {}),
             },
             { preserveState: true, replace: true },
         );
@@ -164,7 +172,7 @@ export default function CommunicationsIndex({
                             </div>
                             <FilterDropdown
                                 activeCount={
-                                    [type, status, areaId !== 'all' ? areaId : '', dateFrom, dateTo].filter(
+                                    [type, status, is_admin && areaId !== 'all' ? areaId : '', dateFrom, dateTo].filter(
                                         Boolean,
                                     ).length
                                 }
@@ -199,6 +207,7 @@ export default function CommunicationsIndex({
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    {is_admin && (
                                     <div>
                                         <FilterSectionTitle>Área</FilterSectionTitle>
                                         <Select value={areaId} onValueChange={(v) => setAreaId(v)}>
@@ -215,6 +224,7 @@ export default function CommunicationsIndex({
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    )}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <FilterSectionTitle>Desde</FilterSectionTitle>
@@ -237,7 +247,7 @@ export default function CommunicationsIndex({
                                         onClick={() => {
                                             setType('');
                                             setStatus('');
-                                            setAreaId('all');
+                                            setAreaId(is_admin ? 'all' : (lockedAreaId ?? 'none'));
                                             setDateFrom('');
                                             setDateTo('');
                                         }}
