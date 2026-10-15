@@ -48,7 +48,8 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 
 ## Comunicaciones / Oficios
 
-- Un usuario crea una comunicación interna (`ci`) u oficio externo (`of`).
+- Un usuario crea una comunicación de cualquiera de los tipos activos
+  (`type_communications`: `ci`, `of.ext`, etc.).
 - Campos:
   - **Área**: la del puesto del usuario logueado (no editable; puede diferir del área de numeración).
   - **Puesto**: el del usuario al crear (se guarda `position_id`; si cambia de puesto después, la comunicación conserva el puesto original).
@@ -65,7 +66,7 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 ## Correlativo
 
 - **Formato**: `prefijo.codigo_area.secuencia/año` (ej. `ci.carto.0001/2026`).
-- Los tipos de comunicación viven en `type_communications` (modelo `CommunicationType`): `code` (prefijo, único, regex `^[a-z0-9_-]+$`), `name`, `digits` (relleno con ceros, 1-6, default 4), `format_template` opcional con variables `{prefix} {area} {seq} {year}`, `reset_annually` (default `true`), `is_active`, `sort_order`.
+- Los tipos de comunicación viven en `type_communications` (modelo `CommunicationType`): `code` (prefijo, único, regex `^[a-z0-9_-]+(\.[a-z0-9_-]+)*$` — admite puntos intermedios como `of.ext`, sin punto inicial/final ni dobles), `name`, `digits` (relleno con ceros, 1-6, default 4), `format_template` opcional con variables `{prefix} {area} {seq} {year}`, `reset_annually` (default `true`), `is_active`, `sort_order`.
 - `communications.communication_type_id` FK (`restrictOnDelete`: no se elimina un tipo con comunicaciones). `area_number_counters.communication_type_id` FK (`cascadeOnDelete`); unique `area_id+year+communication_type_id`.
 - No hay seeds fijos de tipos: el admin los crea en `/admin/communication-types`. Las migraciones derivan tipos desde los códigos existentes para no romper datos.
 - El formato lo genera `NumberSequenceService::format()` (código de tipo y de área en minúsculas, secuencia con `digits` dígitos).
@@ -73,6 +74,23 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
 - **Reinicio efectivo**: la secuencia reinicia cada año solo si el área (`areas.reset_annually`) Y el tipo (`type_communications.reset_annually`) lo permiten; si cualquiera es `false`, continúa del max previo.
 - **Nunca se reutiliza un número**, aunque la comunicación se anule.
 - La asignación es atómica (`incrementAndGet`) para evitar duplicados concurrentes.
+
+## Dashboard
+
+- Las stats son dinámicas por tipo: el repositorio genera una columna por cada
+  código de tipo activo (`typeCountColumns`), así que un tipo nuevo (o con punto,
+  ej. `of.ext`) aparece automáticamente. El frontend lee por clave con fallback
+  a cero para no producir nunca `NaN`.
+- Tarjetas, gráficos y tablas se generan uno por tipo con movimiento; los tipos
+  en cero se ocultan. Sin movimiento, se muestra "Sin registros".
+- Alcance: cada usuario ve por defecto su propia área. Solo el rol
+  `administrador` tiene el filtro principal de área ("Mi área" / otra área /
+  "Todas las áreas"); el resto siempre ve su área aunque manipule el parámetro.
+- Rendimiento: stats cacheadas 300s con clave por alcance resuelto, props
+  diferidas (`destinoStats`/`userStats`) e índices (`comms_dashboard_area_idx`,
+  etc.). Crear/editar/eliminar tipos invalida la caché de stats.
+- Post-login: `administrador` y `jefe` van al dashboard; los demás a
+  `/comunicaciones` (se respeta la URL intentada si existe).
 
 ### Numeración configurable por área
 

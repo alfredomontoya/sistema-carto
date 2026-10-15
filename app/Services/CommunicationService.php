@@ -203,13 +203,13 @@ class CommunicationService
         return $this->communications->paginate($filters, $perPage);
     }
 
-    public function getDashboardStats(User $user, int $year): array
+    public function getDashboardStats(User $user, int $year, ?string $areaFilter = null): array
     {
-        $cacheKey = $this->buildStatsCacheKey($user, $year);
+        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaId, $global);
+        $cacheKey = "dashboard:stats:v{$this->statsVersion()}:{$scope}:{$year}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $year) {
-            [$areaId, $global] = $this->resolveStatsScope($user);
-
+        return Cache::remember($cacheKey, 300, function () use ($areaId, $global, $year) {
             if (! $global && $areaId === null) {
                 return [];
             }
@@ -218,17 +218,17 @@ class CommunicationService
         });
     }
 
-    public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
+    public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false, ?string $areaFilter = null): array
     {
-        [$areaId, $global] = $this->resolveStatsScope($user);
+        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
         $scopeAreaIds = $this->resolveDestinoScope($user);
         $scope = $scopeAreaIds === null
-            ? $this->statsScopeKey($user)
+            ? $this->statsScopeKeyFor($areaId, $global)
             : 'areas_'.md5(implode(',', [...$scopeAreaIds]));
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $global, $areaId, $scopeAreaIds, $includeAnnulled) {
+        return Cache::remember($cacheKey, 300, function () use ($from, $to, $global, $areaId, $scopeAreaIds, $includeAnnulled) {
             if (! $global && $areaId === null) {
                 return [];
             }
@@ -262,15 +262,14 @@ class CommunicationService
         return null;
     }
 
-    public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false): array
+    public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false, ?string $areaFilter = null): array
     {
-        $scope = $this->statsScopeKey($user);
+        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaId, $global);
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:usuarios:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($user, $from, $to, $includeAnnulled) {
-            [$areaId, $global] = $this->resolveStatsScope($user);
-
+        return Cache::remember($cacheKey, 300, function () use ($from, $to, $global, $areaId, $includeAnnulled) {
             if (! $global && $areaId === null) {
                 return [];
             }
@@ -279,14 +278,13 @@ class CommunicationService
         });
     }
 
-    public function getAvailableYears(User $user): array
+    public function getAvailableYears(User $user, ?string $areaFilter = null): array
     {
-        $scope = $this->statsScopeKey($user);
+        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaId, $global);
         $cacheKey = "dashboard:years:v{$this->statsVersion()}:{$scope}";
 
-        return Cache::remember($cacheKey, 3600, function () use ($user) {
-            [$areaId, $global] = $this->resolveStatsScope($user);
-
+        return Cache::remember($cacheKey, 3600, function () use ($global, $areaId) {
             if (! $global && $areaId === null) {
                 return [];
             }
@@ -313,9 +311,27 @@ class CommunicationService
     }
 
     /**
+     * Active communication types for dynamic dashboard stats
+     * (cards, charts and tables render one series per type).
+     *
+     * @return array<int, array{id: string, code: string, name: string}>
+     */
+    public function activeTypes(): array
+    {
+        return $this->types->active()->map(fn ($type) => [
+            'id' => $type->id,
+            'code' => $type->code,
+            'name' => $type->name,
+        ])->all();
+    }
+
+    /**
      * Dashboard scope: the user's own area when they have one
      * (admins included), global only for area-less admins,
      * empty for area-less basic users.
+     *
+     * An administrator may override the scope with an area filter:
+     * another area id, or 'all' for every area.
      *
      * @return array{string|null, bool} [areaId, global]
      */
@@ -330,10 +346,31 @@ class CommunicationService
         return [null, $user->seesGlobalStats()];
     }
 
+    /**
+     * @return array{string|null, bool} [areaId, global]
+     */
+    private function resolveStatsScopeWithFilter(User $user, ?string $areaFilter): array
+    {
+        if ($areaFilter !== null && $user->hasRole('administrador')) {
+            if ($areaFilter === 'all') {
+                return [null, true];
+            }
+
+            return [$areaFilter, false];
+        }
+
+        return $this->resolveStatsScope($user);
+    }
+
     private function statsScopeKey(User $user): string
     {
         [$areaId, $global] = $this->resolveStatsScope($user);
 
+        return $this->statsScopeKeyFor($areaId, $global);
+    }
+
+    private function statsScopeKeyFor(?string $areaId, bool $global): string
+    {
         if ($global) {
             return 'global';
         }
@@ -352,7 +389,7 @@ class CommunicationService
         return (int) Cache::rememberForever(self::STATS_CACHE_VERSION_KEY, fn (): int => 1);
     }
 
-    private function invalidateDashboardStats(): void
+    public function invalidateDashboardStats(): void
     {
         if (! Cache::has(self::STATS_CACHE_VERSION_KEY)) {
             Cache::forever(self::STATS_CACHE_VERSION_KEY, 1);

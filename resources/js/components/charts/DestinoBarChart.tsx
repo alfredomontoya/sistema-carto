@@ -8,34 +8,17 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { CHART_DARK_PALETTE, getChartTheme } from '@/lib/chart-theme';
+import { CHART_DARK_PALETTE, TYPE_PALETTE, getChartTheme } from '@/lib/chart-theme';
 import { useTheme } from '@/components/brand/ThemeProvider';
+import { statValue } from '@/lib/type-stats';
 
 export interface DestinoStat {
     destino: string;
     total: number;
-    ci: number;
-    of: number;
     [typeCode: string]: number | string;
 }
 
-const PALETTE = [
-    'var(--brand-primary)',
-    'var(--brand-secondary)',
-    '#7c3aed',
-    '#db2777',
-    '#ea580c',
-    '#65a30d',
-    '#0891b2',
-    '#4f46e5',
-    '#b45309',
-    '#0d9488',
-    '#be123c',
-    '#1d4ed8',
-    '#6d28d9',
-    '#0e7490',
-    '#4d7c0f',
-];
+const PALETTE = TYPE_PALETTE;
 
 function ColoredTick({
     x,
@@ -71,17 +54,24 @@ function ColoredTick({
 
 export function DestinoBarChart({
     data,
-    type,
+    dataKey,
+    label,
 }: {
     data: DestinoStat[];
-    type: 'ci' | 'of' | 'total';
+    dataKey: string;
+    label: string;
 }) {
     const { theme } = useTheme();
     const chart = getChartTheme(theme);
     const dark = theme === 'dark';
     const palette = dark ? CHART_DARK_PALETTE : PALETTE;
 
-    if (data.every((d) => d[type] === 0)) {
+    const rows = data.map((d) => ({
+        destino: d.destino,
+        value: statValue(d as unknown as Record<string, unknown>, dataKey),
+    }));
+
+    if (rows.every((r) => r.value === 0)) {
         return (
             <div className="flex h-80 items-center justify-center text-sm text-muted-foreground">
                 Sin registros para este filtro.
@@ -93,7 +83,7 @@ export function DestinoBarChart({
         <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                    data={data}
+                    data={rows}
                     layout="vertical"
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                 >
@@ -123,18 +113,11 @@ export function DestinoBarChart({
                         labelStyle={{ color: chart.tooltipText }}
                         itemStyle={{ color: chart.tooltipText }}
                         cursor={{ fill: chart.cursor }}
-                        formatter={(value) => [
-                            value,
-                            type === 'ci'
-                                ? 'Comunicaciones'
-                                : type === 'of'
-                                  ? 'Oficios'
-                                  : 'Total',
-                        ]}
+                        formatter={(value) => [value, label]}
                         labelFormatter={(label) => label as string}
                     />
-                    <Bar dataKey={type} radius={[0, 4, 4, 0]}>
-                        {data.map((entry, i) => (
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {rows.map((entry, i) => (
                             <Cell key={entry.destino} fill={palette[i % palette.length]} />
                         ))}
                     </Bar>

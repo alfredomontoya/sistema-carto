@@ -1,4 +1,5 @@
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { statValue } from '@/lib/type-stats';
 import type { DestinoStat } from './DestinoBarChart';
 
 export function ChartDataTable({
@@ -7,12 +8,13 @@ export function ChartDataTable({
     labelHeader,
 }: {
     data: DestinoStat[];
-    valueKey: 'ci' | 'of' | 'total';
+    valueKey: string;
     labelHeader: string;
 }) {
-    const total = data.reduce((acc, d) => acc + d[valueKey], 0);
+    const num = (d: DestinoStat) => statValue(d as unknown as Record<string, unknown>, valueKey);
+    const total = data.reduce((acc, d) => acc + num(d), 0);
 
-    if (data.every((d) => d[valueKey] === 0)) {
+    if (data.every((d) => num(d) === 0)) {
         return (
             <p className="py-4 text-center text-sm text-muted-foreground">
                 Sin registros para este filtro.
@@ -30,11 +32,11 @@ export function ChartDataTable({
             </TableHeader>
             <TableBody>
                 {data
-                    .filter((d) => d[valueKey] > 0)
+                    .filter((d) => num(d) > 0)
                     .map((d) => (
                         <TableRow key={d.destino}>
                             <TableCell className="font-medium">{d.destino}</TableCell>
-                            <TableCell className="text-right tabular-nums">{d[valueKey]}</TableCell>
+                            <TableCell className="text-right tabular-nums">{num(d)}</TableCell>
                         </TableRow>
                     ))}
             </TableBody>

@@ -18,7 +18,7 @@ class UpdateCommunicationTypeRequest extends FormRequest
         $id = $this->route('communication_type');
 
         return [
-            'code' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9_-]+$/', Rule::unique('type_communications', 'code')->ignore($id)],
+            'code' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*$/', Rule::unique('type_communications', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:500'],
             'digits' => ['required', 'integer', 'min:1', 'max:6'],

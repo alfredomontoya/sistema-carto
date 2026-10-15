@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Http\Resources\UserResource;
 use App\Services\BrandSettingsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 use Inertia\Inertia;
 
@@ -52,6 +53,9 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'name' => (string) config('app.name'),
                 'user_domain' => (string) config('auth.user_domain'),
+                'env' => (string) config('app.env'),
+                'is_production' => app()->isProduction(),
+                'db_name' => (string) (DB::getDatabaseName() ?? ''),
             ],
             'auth' => [
                 'user' => $user ? UserResource::make($user)->resolve() : null,

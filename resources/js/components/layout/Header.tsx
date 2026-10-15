@@ -72,6 +72,11 @@ export function Header({ onOpenMobile }: { onOpenMobile: () => void }) {
                             <p className="text-xs text-muted-foreground">
                                 {user.username}@{userDomain}
                             </p>
+                            {user.roles.length > 0 && (
+                                <p className="mt-1 text-xs font-medium capitalize text-primary">
+                                    {user.roles.join(' · ')}
+                                </p>
+                            )}
                             <p className="mt-1 text-xs text-muted-foreground">
                                 {user.current_position ? (
                                     <>

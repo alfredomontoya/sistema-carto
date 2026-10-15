@@ -132,10 +132,14 @@ class NumberSequenceService
     /**
      * Extract the prefix/area/sequence/year from a full number
      * (used for repair/audit).
+     *
+     * The prefix may itself contain dots (e.g. `of.ext`), so this greedily
+     * matches the longest prefix and is ambiguous when both prefix and area
+     * contain dots; disambiguate against known type/area codes if needed.
      */
     public function parse(string $number): ?array
     {
-        if (! preg_match('/^([a-z0-9_-]+)\.([a-z0-9._-]+)\.(\d+)\/(\d{4})$/', $number, $m)) {
+        if (! preg_match('/^([a-z0-9_.-]+)\.([a-z0-9._-]+)\.(\d+)\/(\d{4})$/', $number, $m)) {
             return null;
         }
 

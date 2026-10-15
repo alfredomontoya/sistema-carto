@@ -1,6 +1,7 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Moon, Sun } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
+import { Badge } from '@/components/ui/badge';
 import { BrandThemeProvider } from '@/components/brand/BrandThemeProvider';
 import { useTheme } from '@/components/brand/ThemeProvider';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,12 @@ function GuestThemeToggle() {
 }
 
 export default function GuestLayout({ children }: PropsWithChildren) {
+    const app = usePage().props.app;
+    const appEnv = (app?.env ?? 'production').toLowerCase();
+    const isProd = app?.is_production ?? appEnv === 'production';
+    const envLabel = isProd ? 'PROD' : appEnv === 'staging' ? 'PRE' : 'DEV';
+    const dbName = app?.db_name ?? null;
+
     return (
         <BrandThemeProvider>
             <div
@@ -45,9 +52,21 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                 <CardContent className="p-8">{children}</CardContent>
             </Card>
 
-            <p className="mt-6 text-xs text-muted-foreground">
-                © {new Date().getFullYear()} · Todos los derechos reservados
-            </p>
+            <div className="mt-6 flex flex-col items-center gap-1.5">
+                <p className="text-xs text-muted-foreground">
+                    © {new Date().getFullYear()} · v1.0 · Todos los derechos reservados
+                </p>
+                <div className="flex items-center gap-1.5">
+                    <Badge variant={isProd ? 'success' : 'warning'} className="text-[10px] text-amber-950 dark:text-amber-950">
+                        {envLabel}
+                    </Badge>
+                    {dbName && (
+                        <span className="text-[11px] text-muted-foreground" title={dbName}>
+                            {dbName}
+                        </span>
+                    )}
+                </div>
+            </div>
             </div>
         </BrandThemeProvider>
     );

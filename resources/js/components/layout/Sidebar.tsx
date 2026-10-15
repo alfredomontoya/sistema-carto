@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Tooltip,
@@ -27,8 +28,12 @@ export function Sidebar({
 }) {
     const isDesktop = useIsDesktop();
     const compact = collapsed && isDesktop;
-    const { url } = usePage();
-    const user = usePage().props.auth.user as UserData;
+    const { url, props } = usePage();
+    const user = props.auth.user as UserData;
+    const appEnv = (props.app?.env ?? 'production').toLowerCase();
+    const isProd = props.app?.is_production ?? appEnv === 'production';
+    const envLabel = isProd ? 'PROD' : appEnv === 'staging' ? 'PRE' : 'DEV';
+    const dbName = props.app?.db_name ?? null;
 
     const nav = navigation(user.can);
 
@@ -88,15 +93,22 @@ export function Sidebar({
                 </div>
 
                 {isDesktop && compact && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onToggle}
-                        className="mx-auto mt-3 text-sidebar-foreground"
-                        aria-label="Expandir menú"
-                    >
-                        <PanelLeftOpen className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onToggle}
+                                    className="mx-auto mt-3 text-sidebar-foreground"
+                                    aria-label="Expandir menú"
+                                >
+                                    <PanelLeftOpen className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">Expandir menú</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 )}
 
                 <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
@@ -147,10 +159,35 @@ export function Sidebar({
                     ))}
                 </nav>
 
-                <div className="border-t border-sidebar-border p-3">
-                    <p className={cn('px-2 text-xs text-sidebar-foreground/50', compact && 'text-center')}>
-                        {compact ? 'v1.0' : '© ' + new Date().getFullYear() + ' · v1.0'}
-                    </p>
+                <div className="space-y-1.5 border-t border-sidebar-border p-3">
+                    {compact ? (
+                        <div
+                            className="flex flex-col items-center gap-1"
+                            title={`${envLabel}${dbName ? ` · ${dbName}` : ''}`}
+                        >
+                            <span
+                                className={cn(
+                                    'h-2 w-2 rounded-full',
+                                    isProd ? 'bg-green-500' : 'bg-amber-500',
+                                )}
+                            />
+                            <p className="text-center text-xs text-sidebar-foreground/50">v1.0</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-center gap-1.5 px-2 text-xs text-sidebar-foreground/50">
+                                <span>{'© ' + new Date().getFullYear() + ' · v1.0'}</span>
+                                <Badge variant={isProd ? 'success' : 'warning'} className="text-[10px] text-amber-950 dark:text-amber-950">
+                                    {envLabel}
+                                </Badge>
+                                {dbName && (
+                                    <span className="truncate text-[11px]" title={dbName}>
+                                        {dbName}
+                                    </span>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </aside>
         </>

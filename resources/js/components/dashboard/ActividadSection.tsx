@@ -1,34 +1,41 @@
-import { Inbox, Send, TrendingUp } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { LazySection } from '@/components/LazySection';
 import { ChartCard, MonthlyBarChart, YearlyLineChart, YearSelector } from '@/components/charts';
+import { CHART_DARK_PALETTE, TYPE_PALETTE } from '@/lib/chart-theme';
+import { useTheme } from '@/components/brand/ThemeProvider';
+import { buildTypeSeries, statValue } from '@/lib/type-stats';
+import type { CommunicationTypeRef, MonthStatRow } from '@/types';
 import { memo } from 'react';
 
 const MemoMonthlyBarChart = memo(MonthlyBarChart);
 const MemoYearlyLineChart = memo(YearlyLineChart);
 
-interface MonthStat {
-    month: number;
-    ci: number;
-    of: number;
-    total: number;
-}
-
 export function ActividadSection({
     stats,
+    types,
     selectedYear,
     availableYears,
     isAdmin,
     onYearChange,
 }: {
-    stats: MonthStat[];
+    stats: MonthStatRow[];
+    types: CommunicationTypeRef[];
     selectedYear: number;
     availableYears: number[];
     isAdmin: boolean;
     onYearChange: (year: number) => void;
 }) {
-    const hasData = stats.some((s) => s.total > 0);
-    const yearTotal = stats.reduce((acc, s) => acc + s.total, 0);
+    const { theme } = useTheme();
+    const palette = theme === 'dark' ? CHART_DARK_PALETTE : TYPE_PALETTE;
+
+    const activeTypes = types.filter(
+        (t) => stats.reduce((acc, s) => acc + statValue(s, t.code), 0) > 0,
+    );
+    const series = buildTypeSeries(activeTypes, palette);
+
+    const hasData = stats.some((s) => (s.total ?? 0) > 0);
+    const yearTotal = stats.reduce((acc, s) => acc + (s.total ?? 0), 0);
 
     return (
         <div className="space-y-6">
@@ -55,27 +62,27 @@ export function ActividadSection({
                 </Card>
             ) : (
                 <LazySection>
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {series.map((s) => (
+                            <ChartCard
+                                key={s.key}
+                                title={`Mensual ${s.name.toLowerCase()}`}
+                                fileName={`mensual-${s.code.toLowerCase()}-${selectedYear}`}
+                            >
+                                <MemoMonthlyBarChart
+                                    data={stats}
+                                    year={selectedYear}
+                                    metric={s.code}
+                                    label={s.name}
+                                    color={s.color}
+                                />
+                            </ChartCard>
+                        ))}
                         <ChartCard
-                            icon={<Inbox className="h-4 w-4 text-muted-foreground" />}
-                            title="Mensual comunicaciones"
-                            fileName={`mensual-comunicaciones-${selectedYear}`}
-                        >
-                            <MemoMonthlyBarChart data={stats} year={selectedYear} metric="ci" />
-                        </ChartCard>
-                        <ChartCard
-                            icon={<Send className="h-4 w-4 text-muted-foreground" />}
-                            title="Mensual oficios"
-                            fileName={`mensual-oficios-${selectedYear}`}
-                        >
-                            <MemoMonthlyBarChart data={stats} year={selectedYear} metric="of" />
-                        </ChartCard>
-                        <ChartCard
-                            icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
                             title="Tendencia anual"
                             fileName={`tendencia-anual-${selectedYear}`}
                         >
-                            <MemoYearlyLineChart data={stats} year={selectedYear} />
+                            <MemoYearlyLineChart data={stats} year={selectedYear} series={series} />
                         </ChartCard>
                     </div>
                 </LazySection>

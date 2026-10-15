@@ -38,6 +38,24 @@ export function getChartTheme(theme: 'light' | 'dark'): ChartTheme {
     return theme === 'dark' ? DARK : LIGHT;
 }
 
+export const TYPE_PALETTE = [
+    'var(--brand-primary)',
+    'var(--brand-secondary)',
+    '#7c3aed',
+    '#db2777',
+    '#ea580c',
+    '#65a30d',
+    '#0891b2',
+    '#4f46e5',
+    '#b45309',
+    '#0d9488',
+    '#be123c',
+    '#1d4ed8',
+    '#6d28d9',
+    '#0e7490',
+    '#4d7c0f',
+];
+
 export const CHART_DARK_PALETTE = [
     '#60a5fa',
     '#2dd4bf',

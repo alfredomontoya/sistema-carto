@@ -11,20 +11,31 @@ import {
 import { MONTHS } from '@/lib/constants';
 import { getChartTheme } from '@/lib/chart-theme';
 import { useTheme } from '@/components/brand/ThemeProvider';
+import { statValue } from '@/lib/type-stats';
+import type { MonthStatRow } from '@/types';
+import type { TypeSeries } from '@/lib/type-stats';
 
 interface YearlyLineChartProps {
-  data: { month: number; ci: number; of: number; total: number }[];
+  data: MonthStatRow[];
   year: number;
+  series: TypeSeries[];
 }
 
-export function YearlyLineChart({ data, year }: YearlyLineChartProps) {
+export function YearlyLineChart({ data, year, series }: YearlyLineChartProps) {
   const { theme } = useTheme();
   const chart = getChartTheme(theme);
   const monthsWithData = Array.from({ length: 12 }, (_, i) => {
     const month = i + 1;
-    const found = data.find(d => d.month === month);
-    return found ?? { month, ci: 0, of: 0, total: 0 };
+    const found: MonthStatRow = data.find(d => d.month === month) ?? { month, total: 0 };
+    return {
+      month,
+      total: found.total,
+      ...Object.fromEntries(series.map((s) => [s.key, statValue(found, s.code)])),
+    };
   });
+
+  const legendName = (value: string) =>
+    value === 'total' ? 'Total' : series.find((s) => s.key === value)?.name ?? value;
 
   return (
     <div className="h-80">
@@ -51,26 +62,20 @@ export function YearlyLineChart({ data, year }: YearlyLineChartProps) {
             align="center"
             verticalAlign="bottom"
             wrapperStyle={{ paddingTop: '10px', color: chart.legend }}
-            formatter={(value) => value === 'ci' ? 'Comunicaciones internas' : value === 'of' ? 'Oficios externos' : 'Total'}
+            formatter={(value) => legendName(value as string)}
           />
-          <Line
-            type="monotone"
-            dataKey="ci"
-            stroke="var(--brand-primary)"
-            strokeWidth={2}
-            dot={{ fill: 'var(--brand-primary)', strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, strokeWidth: 2 }}
-            name="ci"
-          />
-          <Line
-            type="monotone"
-            dataKey="of"
-            stroke="var(--brand-secondary)"
-            strokeWidth={2}
-            dot={{ fill: 'var(--brand-secondary)', strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6, strokeWidth: 2 }}
-            name="of"
-          />
+          {series.map((s) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              stroke={s.color}
+              strokeWidth={2}
+              dot={{ fill: s.color, strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, strokeWidth: 2 }}
+              name={s.key}
+            />
+          ))}
           <Line
             type="monotone"
             dataKey="total"

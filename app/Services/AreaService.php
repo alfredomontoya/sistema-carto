@@ -100,7 +100,11 @@ class AreaService
      */
     public function wouldCreateCycle(Area $area, ?string $newParentId): bool
     {
-        if ($newParentId === null || $newParentId === $area->id) {
+        if ($newParentId === null) {
+            return false;
+        }
+
+        if ($newParentId === $area->id) {
             return true;
         }
 

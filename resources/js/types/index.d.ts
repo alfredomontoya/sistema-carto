@@ -84,6 +84,9 @@ export interface BrandData {
 export interface AppData {
     name: string;
     user_domain: string;
+    env: string;
+    is_production: boolean;
+    db_name: string | null;
 }
 
 export interface CommunicationTypeData {
@@ -96,6 +99,18 @@ export interface CommunicationTypeData {
     reset_annually: boolean;
     is_active: boolean;
     sort_order: number;
+}
+
+export interface CommunicationTypeRef {
+    id: string;
+    code: string;
+    name: string;
+}
+
+export interface MonthStatRow {
+    month: number;
+    total: number;
+    [code: string]: number;
 }
 
 export interface CommunicationData {

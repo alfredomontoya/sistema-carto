@@ -15,7 +15,7 @@ class StoreCommunicationTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9_-]+$/', 'unique:type_communications,code'],
+            'code' => ['required', 'string', 'max:20', 'regex:/^[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*$/', 'unique:type_communications,code'],
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:500'],
             'digits' => ['required', 'integer', 'min:1', 'max:6'],

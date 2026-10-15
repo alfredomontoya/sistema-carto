@@ -1,4 +1,4 @@
-import { Download, Pencil } from 'lucide-react';
+import { Bold, CaseLower, CaseUpper, Download, Pencil } from 'lucide-react';
 import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { formatDateTime } from '@/lib/dates';
+import { cn } from '@/lib/utils';
 import type { CommunicationData } from '@/types';
 import { CopyNumberButton } from './CopyNumberButton';
 
@@ -39,6 +40,17 @@ export function CommunicationShowDialog({
     onEdit?: () => void;
 }) {
     const c = communication;
+    const [upper, setUpper] = React.useState(true);
+    const [bold, setBold] = React.useState(true);
+
+    React.useEffect(() => {
+        if (open) {
+            setUpper(true);
+            setBold(true);
+        }
+    }, [open, communication?.id]);
+
+    const formattedNumber = c === null ? '' : upper ? c.number.toUpperCase() : c.number.toLowerCase();
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,11 +74,48 @@ export function CommunicationShowDialog({
                 {c !== null && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-xs font-medium text-muted-foreground">Número correlativo</p>
-                                <p className="font-mono text-lg font-semibold uppercase text-foreground">{c.number}</p>
+                                <p
+                                    className={cn(
+                                        'font-mono text-lg break-all text-foreground',
+                                        bold ? 'font-bold' : 'font-normal',
+                                    )}
+                                >
+                                    {formattedNumber}
+                                </p>
+                                <div className="mt-2 flex gap-1.5">
+                                    <Button
+                                        type="button"
+                                        variant={upper ? 'default' : 'outline'}
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => setUpper((v) => !v)}
+                                        title={upper ? 'Cambiar a minúsculas' : 'Cambiar a mayúsculas'}
+                                        aria-pressed={upper}
+                                        aria-label={upper ? 'Cambiar a minúsculas' : 'Cambiar a mayúsculas'}
+                                    >
+                                        {upper ? (
+                                            <CaseUpper className="h-4 w-4" />
+                                        ) : (
+                                            <CaseLower className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={bold ? 'default' : 'outline'}
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => setBold((v) => !v)}
+                                        title={bold ? 'Quitar negrita' : 'Poner negrita'}
+                                        aria-pressed={bold}
+                                        aria-label={bold ? 'Quitar negrita' : 'Poner negrita'}
+                                    >
+                                        <Bold className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <CopyNumberButton value={c.number} />
+                            <CopyNumberButton value={formattedNumber} bold={bold} />
                         </div>
 
                         <Row label="Referencia">{c.reference || '—'}</Row>

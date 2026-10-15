@@ -53,7 +53,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $redirect = redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user();
+        $home = $user->hasRole('administrador') || $user->hasRole('jefe')
+            ? route('dashboard', absolute: false)
+            : route('communications.index', absolute: false);
+
+        $redirect = redirect()->intended($home);
 
         $ranking = $this->communications->yesterdayCreatorStats($request->user());
 

@@ -11,25 +11,24 @@ import {
 import { MONTHS } from '@/lib/constants';
 import { getChartTheme } from '@/lib/chart-theme';
 import { useTheme } from '@/components/brand/ThemeProvider';
+import { statValue } from '@/lib/type-stats';
+import type { MonthStatRow } from '@/types';
 
 interface MonthlyBarChartProps {
-  data: { month: number; ci: number; of: number; total: number }[];
+  data: MonthStatRow[];
   year: number;
-  metric: 'ci' | 'of';
+  metric: string;
+  label: string;
+  color: string;
 }
 
-const METRIC_LABEL: Record<'ci' | 'of', string> = {
-  ci: 'Comunicaciones internas',
-  of: 'Oficios externos',
-};
-
-export function MonthlyBarChart({ data, year, metric }: MonthlyBarChartProps) {
+export function MonthlyBarChart({ data, year, metric, label, color }: MonthlyBarChartProps) {
   const { theme } = useTheme();
   const chart = getChartTheme(theme);
   const monthsWithData = Array.from({ length: 12 }, (_, i) => {
     const month = i + 1;
     const found = data.find(d => d.month === month);
-    return found ?? { month, ci: 0, of: 0, total: 0 };
+    return { month, value: found ? statValue(found, metric) : 0 };
   });
 
   return (
@@ -54,7 +53,7 @@ export function MonthlyBarChart({ data, year, metric }: MonthlyBarChartProps) {
             labelStyle={{ color: chart.tooltipText }}
             itemStyle={{ color: chart.tooltipText }}
             cursor={{ fill: chart.cursor }}
-            formatter={(value) => [value, METRIC_LABEL[metric]]}
+            formatter={(value) => [value, label]}
           />
           <Legend
             layout="horizontal"
@@ -62,11 +61,11 @@ export function MonthlyBarChart({ data, year, metric }: MonthlyBarChartProps) {
             verticalAlign="bottom"
             iconType="square"
             wrapperStyle={{ paddingTop: '10px', color: chart.legend }}
-            formatter={() => METRIC_LABEL[metric]}
+            formatter={() => label}
           />
           <Bar
-            dataKey={metric}
-            fill={metric === 'ci' ? 'var(--brand-primary)' : 'var(--brand-secondary)'}
+            dataKey="value"
+            fill={color}
             radius={[0, 4, 4, 0]}
             name={metric}
             minPointSize={2}

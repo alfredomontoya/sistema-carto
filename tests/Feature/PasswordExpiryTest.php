@@ -59,7 +59,7 @@ class PasswordExpiryTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('communications.index', absolute: false));
         $response->assertSessionHas('warning');
     }
 
@@ -74,7 +74,7 @@ class PasswordExpiryTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('communications.index', absolute: false));
         $response->assertSessionMissing('warning');
     }
 

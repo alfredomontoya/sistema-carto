@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Area;
 use App\Services\CommunicationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -33,9 +34,13 @@ class DashboardController extends Controller
         $year = $request->integer('year', now()->year);
         $year = max(2020, min($year, now()->year + 1));
 
-        $stats = $this->communications->getDashboardStats($request->user(), $year);
-        $availableYears = $this->communications->getAvailableYears($request->user());
-        $isAdmin = $request->user()->seesGlobalStats();
+        $user = $request->user();
+        $canFilterAreas = $user->hasRole('administrador');
+        $areaFilter = $this->resolveAreaFilter($request, $canFilterAreas);
+
+        $stats = $this->communications->getDashboardStats($user, $year, $areaFilter);
+        $availableYears = $this->communications->getAvailableYears($user, $areaFilter);
+        $isAdmin = $user->seesGlobalStats();
 
         [$period, $from, $to, $periodYear] = $this->resolvePeriod($request);
         $includeAnnulled = $request->boolean('annulled', false);
@@ -45,14 +50,44 @@ class DashboardController extends Controller
             'selectedYear' => $year,
             'availableYears' => $availableYears,
             'isAdmin' => $isAdmin,
-            'destinoStats' => Inertia::defer(fn () => $this->communications->getDestinoStats($request->user(), $from, $to, $includeAnnulled)),
-            'userStats' => Inertia::defer(fn () => $this->communications->getUserStats($request->user(), $from, $to, $includeAnnulled)),
+            'communicationTypes' => $this->communications->activeTypes(),
+            'canFilterAreas' => $canFilterAreas,
+            'selectedAreaId' => $areaFilter,
+            'filterAreas' => $canFilterAreas
+                ? Area::query()->orderBy('name')->get(['id', 'code', 'name'])->all()
+                : [],
+            'destinoStats' => Inertia::defer(fn () => $this->communications->getDestinoStats($user, $from, $to, $includeAnnulled, $areaFilter)),
+            'userStats' => Inertia::defer(fn () => $this->communications->getUserStats($user, $from, $to, $includeAnnulled, $areaFilter)),
             'period' => $period,
             'dateFrom' => $from,
             'dateTo' => $to,
             'periodYear' => $periodYear,
             'includeAnnulled' => $includeAnnulled,
         ]);
+    }
+
+    /**
+     * Resolve the admin area filter: another area id, 'all' for every
+     * area, or null for the user's own scope. Only administrators may
+     * filter; everyone else always sees their own area.
+     */
+    private function resolveAreaFilter(Request $request, bool $canFilter): ?string
+    {
+        if (! $canFilter) {
+            return null;
+        }
+
+        $value = $request->query('area_id');
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        if ($value === 'all') {
+            return 'all';
+        }
+
+        return Area::where('id', $value)->exists() ? $value : null;
     }
 
     /**

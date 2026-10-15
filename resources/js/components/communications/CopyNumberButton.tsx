@@ -3,18 +3,38 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 /**
- * Icon button that copies the correlative number to the clipboard and shows a
- * confirmation (icon change + toast).
+ * Icon button that copies the given text to the clipboard and shows a
+ * confirmation (icon change + toast). When `bold` is true it also writes an
+ * HTML version so rich-text targets (Word, Gmail…) paste it in bold.
  */
-export function CopyNumberButton({ value }: { value: string }) {
+export function CopyNumberButton({ value, bold = false }: { value: string; bold?: boolean }) {
     const [copied, setCopied] = React.useState(false);
 
     const copy = async (e: React.MouseEvent) => {
         e.stopPropagation();
 
+        const html = bold ? `<b>${escapeHtml(value)}</b>` : escapeHtml(value);
+
         try {
-            await navigator.clipboard.writeText(value);
+            if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'text/plain': new Blob([value], { type: 'text/plain' }),
+                        'text/html': new Blob([html], { type: 'text/html' }),
+                    }),
+                ]);
+            } else {
+                await navigator.clipboard.writeText(value);
+            }
         } catch {
             const textarea = document.createElement('textarea');
             textarea.value = value;

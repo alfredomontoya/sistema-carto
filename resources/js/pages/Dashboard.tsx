@@ -14,9 +14,13 @@ import { PeriodFilters } from '@/components/dashboard/PeriodFilters';
 import type { Period } from '@/components/dashboard/PeriodFilters';
 import { TotalsCards } from '@/components/dashboard/TotalsCards';
 import { Button } from '@/components/ui/button';
-import { BarChart2, FileText, TrendingUp } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { BarChart2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import AppLayout from '@/layouts/AppLayout';
-import type { FlashData, UserData } from '@/types';
+import { slugifyCode, statValue } from '@/lib/type-stats';
+import type { CommunicationTypeRef, FlashData, MonthStatRow, UserData } from '@/types';
 
 function formatShort(date: string): string {
     const [y, m, d] = date.split('-');
@@ -25,10 +29,20 @@ function formatShort(date: string): string {
 
 const MemoDestinoBarChart = memo(DestinoBarChart);
 
+interface FilterArea {
+    id: string;
+    code: string;
+    name: string;
+}
+
 export default function Dashboard() {
     const props = usePage().props as unknown as {
         auth: { user: UserData };
-        stats: { month: number; ci: number; of: number; total: number }[];
+        stats: MonthStatRow[];
+        communicationTypes: CommunicationTypeRef[];
+        canFilterAreas: boolean;
+        selectedAreaId: string | null;
+        filterAreas: FilterArea[];
         selectedYear: number;
         availableYears: number[];
         isAdmin: boolean;
@@ -40,7 +54,17 @@ export default function Dashboard() {
         periodYear: number;
         includeAnnulled: boolean;
     };
-    const { auth, stats, selectedYear, availableYears, isAdmin } = props;
+    const {
+        auth,
+        stats,
+        selectedYear,
+        availableYears,
+        isAdmin,
+        communicationTypes = [],
+        canFilterAreas = false,
+        selectedAreaId = null,
+        filterAreas = [],
+    } = props;
     const {
         destinoStats = [],
         userStats = [],
@@ -58,11 +82,35 @@ export default function Dashboard() {
     const [from, setFrom] = useState(dateFrom);
     const [to, setTo] = useState(dateTo);
 
-    const yearCi = stats.reduce((acc, s) => acc + s.ci, 0);
-    const yearOf = stats.reduce((acc, s) => acc + s.of, 0);
+    const areaParams = selectedAreaId ? { area_id: selectedAreaId } : {};
+
+    const yearCounts = communicationTypes.map((t) => ({
+        ...t,
+        value: stats.reduce((acc, s) => acc + statValue(s, t.code), 0),
+    }));
+
+    const destinoTypes = communicationTypes.filter((t) =>
+        destinoStats.some((d) => statValue(d as unknown as Record<string, unknown>, t.code) > 0),
+    );
+    const userTypes = communicationTypes.filter((t) =>
+        userStats.some((d) => statValue(d as unknown as Record<string, unknown>, t.code) > 0),
+    );
+
+    const typeTotal = (data: DestinoStat[], code: string) =>
+        data.reduce((acc, d) => acc + statValue(d as unknown as Record<string, unknown>, code), 0);
+    const grandTotal = (data: DestinoStat[]) =>
+        data.reduce((acc, d) => acc + (d.total ?? 0), 0);
 
     const handleYearChange = (year: number) => {
-        router.get(route('dashboard'), { year }, { preserveState: true, preserveScroll: true });
+        router.get(route('dashboard'), { year, ...areaParams }, { preserveState: true, preserveScroll: true });
+    };
+
+    const applyAreaFilter = (areaId: string) => {
+        router.get(
+            route('dashboard'),
+            { year: selectedYear, ...(areaId ? { area_id: areaId } : {}) },
+            { preserveState: true, preserveScroll: true },
+        );
     };
 
     const applyPeriod = (p: Period, rangeFrom?: string, rangeTo?: string, annulled?: boolean, year?: number) => {
@@ -70,6 +118,7 @@ export default function Dashboard() {
             route('dashboard'),
             {
                 year: selectedYear,
+                ...areaParams,
                 period: p,
                 period_year: year ?? periodYear,
                 annulled: (annulled ?? includeAnnulled) ? 1 : 0,
@@ -87,8 +136,6 @@ export default function Dashboard() {
         }
     };
 
-    const ciTotal = destinoStats.reduce((acc, d) => acc + d.ci, 0);
-    const ofTotal = destinoStats.reduce((acc, d) => acc + d.of, 0);
     const rangeLabel = `${formatShort(dateFrom)} al ${formatShort(dateTo)}`;
     const scopeLabel = includeAnnulled ? 'Todas' : 'Activas';
 
@@ -102,15 +149,38 @@ export default function Dashboard() {
                         Hola, {user.name.split(' ')[0]}
                     </h1>
                     <p className="text-muted-foreground">
-                        Panel principal del sistema de comunicaciones internas y oficios externos.
+                        Panel principal del sistema de comunicaciones.
                     </p>
                 </div>
 
-                <TotalsCards ci={yearCi} of={yearOf} year={selectedYear} />
+                {canFilterAreas && (
+                    <Card>
+                        <CardContent className="flex flex-wrap items-center gap-3 py-4">
+                            <Label htmlFor="dashboard-area">Área</Label>
+                            <select
+                                id="dashboard-area"
+                                className="flex h-9 min-w-56 rounded-md border border-input bg-popover px-3 py-2 text-sm text-popover-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                value={selectedAreaId ?? ''}
+                                onChange={(e) => applyAreaFilter(e.target.value)}
+                            >
+                                <option value="">Mi área</option>
+                                <option value="all">Todas las áreas</option>
+                                {filterAreas.map((a) => (
+                                    <option key={a.id} value={a.id}>
+                                        {a.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <TotalsCards counts={yearCounts} year={selectedYear} />
 
                 {!isBasic && (
                     <ActividadSection
                         stats={stats}
+                        types={communicationTypes}
                         selectedYear={selectedYear}
                         availableYears={availableYears}
                         isAdmin={isAdmin}
@@ -157,51 +227,42 @@ export default function Dashboard() {
 
                         <LazySection>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <ChartCard
-                                icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
-                                title="Comunicaciones por destino"
-                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
-                                fileName="comunicaciones-por-destino"
-                            >
-                                <MemoDestinoBarChart data={destinoStats} type="ci" />
-                            </ChartCard>
-                            <ChartCard
-                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-                                title="Oficios por destino"
-                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
-                                fileName="oficios-por-destino"
-                            >
-                                <MemoDestinoBarChart data={destinoStats} type="of" />
-                            </ChartCard>
+                            {destinoTypes.map((t) => (
+                                <ChartCard
+                                    key={t.code}
+                                    icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
+                                    title={`${t.name} por destino`}
+                                    description={`${rangeLabel} · Total: ${typeTotal(destinoStats, t.code)} · ${scopeLabel}`}
+                                    fileName={`por-destino-${slugifyCode(t.code)}`}
+                                >
+                                    <MemoDestinoBarChart data={destinoStats} dataKey={t.code} label={t.name} />
+                                </ChartCard>
+                            ))}
                             <ChartCard
                                 icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
                                 title="Total por destino"
-                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                description={`${rangeLabel} · Total: ${grandTotal(destinoStats)} · ${scopeLabel}`}
                                 fileName="total-por-destino"
                             >
-                                <MemoDestinoBarChart data={destinoStats} type="total" />
+                                <MemoDestinoBarChart data={destinoStats} dataKey="total" label="Total" />
                             </ChartCard>
                         </div>
                         </LazySection>
 
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <ChartCard
-                                title="Detalle: comunicaciones por destino"
-                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
-                                fileName="detalle-comunicaciones-por-destino"
-                            >
-                                <ChartDataTable data={destinoStats} valueKey="ci" labelHeader="Destino" />
-                            </ChartCard>
-                            <ChartCard
-                                title="Detalle: oficios por destino"
-                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
-                                fileName="detalle-oficios-por-destino"
-                            >
-                                <ChartDataTable data={destinoStats} valueKey="of" labelHeader="Destino" />
-                            </ChartCard>
+                            {destinoTypes.map((t) => (
+                                <ChartCard
+                                    key={t.code}
+                                    title={`Detalle: ${t.name.toLowerCase()} por destino`}
+                                    description={`${rangeLabel} · Total: ${typeTotal(destinoStats, t.code)} · ${scopeLabel}`}
+                                    fileName={`detalle-por-destino-${slugifyCode(t.code)}`}
+                                >
+                                    <ChartDataTable data={destinoStats} valueKey={t.code} labelHeader="Destino" />
+                                </ChartCard>
+                            ))}
                             <ChartCard
                                 title="Detalle: total por destino"
-                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                description={`${rangeLabel} · Total: ${grandTotal(destinoStats)} · ${scopeLabel}`}
                                 fileName="detalle-total-por-destino"
                             >
                                 <ChartDataTable data={destinoStats} valueKey="total" labelHeader="Destino" />
@@ -217,51 +278,42 @@ export default function Dashboard() {
 
                         <LazySection>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {userTypes.map((t) => (
+                                <ChartCard
+                                    key={t.code}
+                                    icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
+                                    title={`${t.name} por usuario`}
+                                    description={`${rangeLabel} · Total: ${typeTotal(userStats, t.code)} · ${scopeLabel}`}
+                                    fileName={`por-usuario-${slugifyCode(t.code)}`}
+                                >
+                                    <MemoDestinoBarChart data={userStats} dataKey={t.code} label={t.name} />
+                                </ChartCard>
+                            ))}
                             <ChartCard
                                 icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
-                                title="Comunicaciones por usuario"
-                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
-                                fileName="comunicaciones-por-usuario"
-                            >
-                                <MemoDestinoBarChart data={userStats} type="ci" />
-                            </ChartCard>
-                            <ChartCard
-                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-                                title="Oficios por usuario"
-                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
-                                fileName="oficios-por-usuario"
-                            >
-                                <MemoDestinoBarChart data={userStats} type="of" />
-                            </ChartCard>
-                            <ChartCard
-                                icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
                                 title="Total por usuario"
-                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                description={`${rangeLabel} · Total: ${grandTotal(userStats)} · ${scopeLabel}`}
                                 fileName="total-por-usuario"
                             >
-                                <MemoDestinoBarChart data={userStats} type="total" />
+                                <MemoDestinoBarChart data={userStats} dataKey="total" label="Total" />
                             </ChartCard>
                         </div>
                         </LazySection>
 
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            <ChartCard
-                                title="Detalle: comunicaciones por usuario"
-                                description={`${rangeLabel} · Total: ${ciTotal} · ${scopeLabel}`}
-                                fileName="detalle-comunicaciones-por-usuario"
-                            >
-                                <ChartDataTable data={userStats} valueKey="ci" labelHeader="Usuario" />
-                            </ChartCard>
-                            <ChartCard
-                                title="Detalle: oficios por usuario"
-                                description={`${rangeLabel} · Total: ${ofTotal} · ${scopeLabel}`}
-                                fileName="detalle-oficios-por-usuario"
-                            >
-                                <ChartDataTable data={userStats} valueKey="of" labelHeader="Usuario" />
-                            </ChartCard>
+                            {userTypes.map((t) => (
+                                <ChartCard
+                                    key={t.code}
+                                    title={`Detalle: ${t.name.toLowerCase()} por usuario`}
+                                    description={`${rangeLabel} · Total: ${typeTotal(userStats, t.code)} · ${scopeLabel}`}
+                                    fileName={`detalle-por-usuario-${slugifyCode(t.code)}`}
+                                >
+                                    <ChartDataTable data={userStats} valueKey={t.code} labelHeader="Usuario" />
+                                </ChartCard>
+                            ))}
                             <ChartCard
                                 title="Detalle: total por usuario"
-                                description={`${rangeLabel} · Total: ${ciTotal + ofTotal} · ${scopeLabel}`}
+                                description={`${rangeLabel} · Total: ${grandTotal(userStats)} · ${scopeLabel}`}
                                 fileName="detalle-total-por-usuario"
                             >
                                 <ChartDataTable data={userStats} valueKey="total" labelHeader="Usuario" />
