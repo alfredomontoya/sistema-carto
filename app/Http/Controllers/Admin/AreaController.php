@@ -20,6 +20,7 @@ class AreaController extends Controller
     {
         return Inertia::render('Admin/Areas/Index', [
             'areas' => Inertia::defer(fn () => $this->areas->tree()),
+            'defaultPositions' => AreaService::defaultPositions(),
         ]);
     }
 

@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -49,6 +50,13 @@ interface AreaFormState {
     numbering_area_id: string;
     is_active: boolean;
     reset_annually: boolean;
+    positions: string[];
+}
+
+interface DefaultPosition {
+    name: string;
+    code: string;
+    sort_order: number;
 }
 
 interface PositionFormState {
@@ -95,7 +103,13 @@ function RowAction({
     );
 }
 
-export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
+export default function AreasIndex({
+    areas,
+    defaultPositions = [],
+}: {
+    areas?: AreaNode[];
+    defaultPositions?: DefaultPosition[];
+}) {
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
     const [search, setSearch] = React.useState('');
     const tree = areas ?? [];
@@ -116,6 +130,7 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
         numbering_area_id: '',
         is_active: true,
         reset_annually: true,
+        positions: [],
     });
 
     const positionForm = useForm<PositionFormState>({
@@ -136,6 +151,7 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
             numbering_area_id: '',
             is_active: true,
             reset_annually: true,
+            positions: defaultPositions.map((p) => p.code.toLowerCase()),
         });
         areaForm.clearErrors();
         setAreaDialogOpen(true);
@@ -151,9 +167,33 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
             numbering_area_id: node.numbering_area_id ?? '',
             is_active: node.is_active,
             reset_annually: node.reset_annually,
+            positions: (node.positions ?? []).filter((p) => p.is_active).map(canonicalKey),
         });
         setAreaDialogOpen(true);
     };
+
+    const togglePosition = (key: string, checked: boolean) => {
+        const current = new Set(areaForm.data.positions);
+        if (checked) current.add(key);
+        else current.delete(key);
+        areaForm.setData('positions', Array.from(current));
+    };
+
+    const defaultCodes = new Set(defaultPositions.map((p) => p.code.toLowerCase()));
+    const defaultNameToCode = new Map(
+        defaultPositions.map((p) => [p.name.toLowerCase(), p.code.toLowerCase()]),
+    );
+    const canonicalKey = (position: PositionData): string => {
+        const code = position.code?.toLowerCase();
+        if (code && defaultCodes.has(code)) return code;
+        const byName = defaultNameToCode.get(position.name.toLowerCase());
+        if (byName) return byName;
+        if (code) return code;
+        return `id:${position.id}`;
+    };
+    const extraPositions = (editing?.positions ?? []).filter(
+        (p) => !defaultCodes.has(canonicalKey(p)),
+    );
 
     const submitArea = (e: React.FormEvent) => {
         e.preventDefault();
@@ -517,6 +557,72 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                                 onChange={(e) => areaForm.setData('description', e.target.value)}
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label>Puestos del área</Label>
+                            <p className="text-xs text-muted-foreground">
+                                {editing
+                                    ? 'Desmarcar un puesto lo deja inactivo. Marcar uno inexistente lo crea.'
+                                    : 'Se crearán activos en la nueva área.'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {defaultPositions.map((position) => (
+                                    <label
+                                        key={position.code}
+                                        className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm"
+                                    >
+                                        <Checkbox
+                                            checked={areaForm.data.positions.includes(
+                                                position.code.toLowerCase(),
+                                            )}
+                                            onCheckedChange={(v) =>
+                                                togglePosition(
+                                                    position.code.toLowerCase(),
+                                                    v === true,
+                                                )
+                                            }
+                                        />
+                                        <span className="font-medium">{position.name}</span>
+                                    </label>
+                                ))}
+                                {!editing &&
+                                    extraPositions.length === 0 &&
+                                    defaultPositions.length === 0 && (
+                                        <p className="col-span-2 text-xs text-muted-foreground">
+                                            No hay puestos por defecto configurados.
+                                        </p>
+                                    )}
+                                {editing &&
+                                    extraPositions.map((position) => {
+                                        const key = canonicalKey(position);
+                                        return (
+                                            <label
+                                                key={position.id}
+                                                className="flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm"
+                                            >
+                                                <Checkbox
+                                                    checked={areaForm.data.positions.includes(key)}
+                                                    onCheckedChange={(v) =>
+                                                        togglePosition(key, v === true)
+                                                    }
+                                                />
+                                                <span className="font-medium">{position.name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {position.is_active
+                                                        ? 'activo'
+                                                        : 'inactivo'}
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                            </div>
+                            {(areaForm.errors.positions ||
+                                areaForm.data.positions.length === 0) && (
+                                <p className="text-sm text-destructive">
+                                    {areaForm.errors.positions ??
+                                        'Selecciona al menos un puesto.'}
+                                </p>
+                            )}
+                        </div>
                         <div className="flex items-center justify-between rounded-md border p-3">
                             <div>
                                 <p className="font-medium">Área activa</p>
@@ -544,7 +650,12 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                             <Button type="button" variant="outline" onClick={() => setAreaDialogOpen(false)}>
                                 Cancelar
                             </Button>
-                            <Button type="submit" disabled={areaForm.processing}>
+                            <Button
+                                type="submit"
+                                disabled={
+                                    areaForm.processing || areaForm.data.positions.length === 0
+                                }
+                            >
                                 {areaForm.processing ? 'Guardando…' : 'Guardar'}
                             </Button>
                         </DialogFooter>

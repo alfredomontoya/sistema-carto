@@ -5,14 +5,35 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\Communication;
 use App\Repositories\Contracts\AreaRepository;
+use App\Repositories\Contracts\PositionRepository;
 use Illuminate\Support\Facades\DB;
 
 class AreaService
 {
     public function __construct(
         private readonly AreaRepository $areas,
+        private readonly PositionRepository $positions,
         private readonly NumberSequenceService $numbers,
     ) {}
+
+    /**
+     * Puestos por defecto ofrecidos al crear un área.
+     * Fuente editable: config/positions.php.
+     *
+     * @return array<int, array{name: string, code: string, sort_order: int}>
+     */
+    public static function defaultPositions(): array
+    {
+        return config('positions.defaults', []);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function defaultPositionCodes(): array
+    {
+        return array_column(self::defaultPositions(), 'code');
+    }
 
     /**
      * @return array<int, array<string, mixed>>
@@ -55,7 +76,15 @@ class AreaService
      */
     public function create(array $data): Area
     {
-        return $this->areas->create($data);
+        $positionCodes = $data['positions'] ?? self::defaultPositionCodes();
+        unset($data['positions']);
+
+        return DB::transaction(function () use ($data, $positionCodes): Area {
+            $area = $this->areas->create($data);
+            $this->createPositions($area->id, (array) $positionCodes);
+
+            return $area;
+        });
     }
 
     /**
@@ -63,11 +92,152 @@ class AreaService
      */
     public function update(Area $area, array $data): Area
     {
+        $positionCodes = array_key_exists('positions', $data) ? $data['positions'] : null;
+        unset($data['positions']);
+
         if (($data['numbering_area_id'] ?? null) === $area->id) {
             $data['numbering_area_id'] = null;
         }
 
-        return $this->areas->update($area, $data);
+        return DB::transaction(function () use ($area, $data, $positionCodes): Area {
+            $updated = $this->areas->update($area, $data);
+
+            if (is_array($positionCodes)) {
+                $this->syncPositions($updated->id, $positionCodes);
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
+     * Crea los puestos seleccionados de la lista por defecto.
+     *
+     * @param  array<int, string>  $codes
+     */
+    private function createPositions(string $areaId, array $codes): void
+    {
+        $defaults = collect(self::defaultPositions())->keyBy('code');
+
+        foreach (array_values(array_unique($codes)) as $code) {
+            $default = $defaults->get($code);
+
+            if ($default === null) {
+                continue;
+            }
+
+            $this->positions->create([
+                'area_id' => $areaId,
+                'name' => $default['name'],
+                'code' => $default['code'],
+                'is_active' => true,
+                'sort_order' => $default['sort_order'] ?? 0,
+            ]);
+        }
+    }
+
+    /**
+     * Sincroniza los puestos del área con la selección del diálogo:
+     * el code seleccionado e inexistente se crea activo, el existente
+     * se activa o desactiva. Nunca se elimina (preserva el historial).
+     * Las entradas `id:<uuid>` identifican puestos sin código.
+     * La comparación es insensible a mayúsculas y el code existente se
+     * normaliza al canónico en minúsculas; si solo coincide el nombre
+     * (códigos heredados como ABOG), también se adopta el code canónico.
+     *
+     * @param  array<int, string>  $selected
+     */
+    private function syncPositions(string $areaId, array $selected): void
+    {
+        $selected = array_values(array_unique($selected));
+        $defaults = collect(self::defaultPositions())->keyBy('code');
+        $existing = $this->positions->forArea($areaId);
+
+        $byId = [];
+        $byCode = [];
+
+        foreach ($existing as $position) {
+            $byId[$position->id] = $position;
+
+            if ($position->code !== null) {
+                $byCode[mb_strtolower($position->code)] ??= $position;
+            }
+        }
+
+        $findExisting = function (string $code) use ($byCode, $defaults, $existing) {
+            if (isset($byCode[$code])) {
+                return $byCode[$code];
+            }
+
+            $default = $defaults->get($code);
+
+            if ($default === null) {
+                return null;
+            }
+
+            $name = mb_strtolower($default['name']);
+
+            foreach ($existing as $position) {
+                if (mb_strtolower($position->name) === $name) {
+                    return $position;
+                }
+            }
+
+            return null;
+        };
+
+        $activeIds = [];
+
+        foreach ($selected as $entry) {
+            if (str_starts_with($entry, 'id:')) {
+                $id = substr($entry, 3);
+
+                if (isset($byId[$id])) {
+                    $activeIds[$id] = true;
+                }
+
+                continue;
+            }
+
+            $found = $findExisting($entry);
+
+            if ($found !== null) {
+                $needsCode = $found->code === null || mb_strtolower($found->code) !== $entry;
+                $collision = isset($byCode[$entry]) && $byCode[$entry]->id !== $found->id;
+
+                if ($needsCode && ! $collision) {
+                    $this->positions->update($found, ['code' => $entry]);
+                }
+
+                $activeIds[$found->id] = true;
+
+                continue;
+            }
+
+            $default = $defaults->get($entry);
+
+            if ($default === null) {
+                continue;
+            }
+
+            $created = $this->positions->create([
+                'area_id' => $areaId,
+                'name' => $default['name'],
+                'code' => $default['code'],
+                'is_active' => true,
+                'sort_order' => $default['sort_order'] ?? 0,
+            ]);
+
+            $activeIds[$created->id] = true;
+        }
+
+        foreach ($existing as $position) {
+            $active = isset($activeIds[$position->id]);
+
+            if ($position->is_active !== $active) {
+                $this->positions->update($position, ['is_active' => $active]);
+            }
+        }
     }
 
     /**

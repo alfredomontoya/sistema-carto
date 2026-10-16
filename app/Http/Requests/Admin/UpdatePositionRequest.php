@@ -16,7 +16,7 @@ class UpdatePositionRequest extends FormRequest
     {
         $this->merge([
             'name' => $this->sanitizeText($this->input('name')),
-            'code' => $this->sanitizeCode($this->input('code')),
+            'code' => $this->sanitizePositionCode($this->input('code')),
         ]);
     }
 
@@ -35,7 +35,7 @@ class UpdatePositionRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:50',
-                'regex:/^[A-Z0-9._-]+$/',
+                'regex:/^[A-Z0-9._-]+$/i',
                 Rule::unique('positions', 'code')
                     ->ignore($position)
                     ->where(
@@ -48,5 +48,16 @@ class UpdatePositionRequest extends FormRequest
             'is_active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
+    }
+
+    private function sanitizePositionCode(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? $value : mb_strtolower($value);
     }
 }
