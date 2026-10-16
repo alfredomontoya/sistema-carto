@@ -35,6 +35,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password Minimum Length
+    |--------------------------------------------------------------------------
+    |
+    | Longitud mínima exigida a las contraseñas en todos los formularios
+    | (perfil, alta y reset admin, recuperación). Solo longitud, sin
+    | exigir letras, números ni símbolos por el momento.
+    |
+    */
+
+    'password_min_length' => (int) env('PASSWORD_MIN_LENGTH', 7),
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------
     |

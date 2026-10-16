@@ -46,7 +46,7 @@ class StoreUserRequest extends FormRequest
                     }
                 },
             ],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::min(config('auth.password_min_length'))],
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:255'],
             'recovery_email' => ['nullable', 'email', 'max:255', 'unique:users,recovery_email'],

@@ -49,7 +49,7 @@ class PasswordRecoveryController extends Controller
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::min(config('auth.password_min_length'))],
         ]);
 
         $ok = $this->recovery->resetFromToken(

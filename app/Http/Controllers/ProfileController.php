@@ -63,7 +63,7 @@ class ProfileController extends Controller
     {
         $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::min(config('auth.password_min_length'))],
         ]);
 
         if (Hash::check($request->input('password'), $request->user()->password)) {
@@ -79,7 +79,7 @@ class ProfileController extends Controller
             ->where('id', '!=', $request->session()->getId())
             ->delete();
 
-        return Redirect::route('profile.edit')->with('success', 'Contraseña actualizada correctamente.');
+        return back();
     }
 
     /**

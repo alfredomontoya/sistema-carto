@@ -1,6 +1,7 @@
 import { Deferred, Head, useForm } from '@inertiajs/react';
 import {
     Briefcase,
+    BriefcaseBusiness,
     ChevronDown,
     ChevronRight,
     FolderPlus,
@@ -29,6 +30,12 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/AppLayout';
 import { cn } from '@/lib/utils';
 import { treeToOptions } from '@/lib/area-tree';
@@ -50,6 +57,42 @@ interface PositionFormState {
     code: string;
     is_active: boolean;
     sort_order: string;
+}
+
+function RowAction({
+    label,
+    onClick,
+    danger = false,
+    size = 'md',
+    children,
+}: {
+    label: string;
+    onClick: () => void;
+    danger?: boolean;
+    size?: 'sm' | 'md';
+    children: React.ReactNode;
+}) {
+    return (
+        <TooltipProvider delayDuration={0}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            size === 'sm' ? 'h-6 w-6' : 'h-7 w-7',
+                            danger && 'text-destructive hover:text-destructive',
+                        )}
+                        onClick={onClick}
+                        aria-label={label}
+                    >
+                        {children}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
 }
 
 export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
@@ -85,8 +128,16 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
 
     const openCreateArea = (parentId = '') => {
         setEditing(null);
-        areaForm.reset();
-        areaForm.setData('parent_id', parentId);
+        areaForm.setData({
+            name: '',
+            code: '',
+            description: '',
+            parent_id: parentId,
+            numbering_area_id: '',
+            is_active: true,
+            reset_annually: true,
+        });
+        areaForm.clearErrors();
         setAreaDialogOpen(true);
     };
 
@@ -127,8 +178,14 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
     const openCreatePosition = (area: AreaNode) => {
         setEditingPosition(null);
         setPositionArea(area);
-        positionForm.reset();
-        positionForm.setData('area_id', area.id);
+        positionForm.setData({
+            area_id: area.id,
+            name: '',
+            code: '',
+            is_active: true,
+            sort_order: '0',
+        });
+        positionForm.clearErrors();
         setPositionDialogOpen(true);
     };
 
@@ -186,13 +243,16 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
     const renderPositions = (node: AreaNode) => {
         if ((node.positions?.length ?? 0) === 0) {
             return (
-                <div
-                    className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground"
+                <button
+                    type="button"
+                    onClick={() => openCreatePosition(node)}
+                    title="Agregar puesto"
+                    className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     style={{ marginLeft: (node.depth + 1) * 20 + 24 }}
                 >
                     <Briefcase className="h-3 w-3" />
                     Sin puestos. Agrega el primero.
-                </div>
+                </button>
             );
         }
 
@@ -219,25 +279,22 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                         <Badge variant="secondary" className="ml-1">
                             {position.user_count} usuario(s)
                         </Badge>
-                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
+                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                            <RowAction
+                                label="Editar puesto"
+                                size="sm"
                                 onClick={() => openEditPosition(node, position)}
                             >
                                 <Pencil className="h-3.5 w-3.5" />
-                                <span className="sr-only">Editar puesto</span>
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:text-destructive"
+                            </RowAction>
+                            <RowAction
+                                label="Eliminar puesto"
+                                size="sm"
+                                danger
                                 onClick={() => setDeletingPosition(position)}
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
-                                <span className="sr-only">Eliminar puesto</span>
-                            </Button>
+                            </RowAction>
                         </div>
                     </div>
                 ))}
@@ -299,24 +356,19 @@ export default function AreasIndex({ areas }: { areas?: AreaNode[] }) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openCreateArea(node.id)}>
+                    <div className="flex items-center gap-1">
+                        <RowAction label="Agregar subárea" onClick={() => openCreateArea(node.id)}>
                             <Plus className="h-4 w-4" />
-                            <span className="sr-only">Agregar subárea</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditArea(node)}>
+                        </RowAction>
+                        <RowAction label="Agregar puesto" onClick={() => openCreatePosition(node)}>
+                            <BriefcaseBusiness className="h-4 w-4" />
+                        </RowAction>
+                        <RowAction label="Editar área" onClick={() => openEditArea(node)}>
                             <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => setDeleting(node)}
-                        >
+                        </RowAction>
+                        <RowAction label="Eliminar área" danger onClick={() => setDeleting(node)}>
                             <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Eliminar</span>
-                        </Button>
+                        </RowAction>
                     </div>
                 </div>
 
