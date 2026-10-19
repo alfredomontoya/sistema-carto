@@ -137,7 +137,14 @@ export default function Dashboard() {
     };
 
     const rangeLabel = `${formatShort(dateFrom)} al ${formatShort(dateTo)}`;
-    const scopeLabel = includeAnnulled ? 'Todas' : 'Activas';
+    const scopeStateLabel = includeAnnulled ? 'Todas' : 'Activas';
+    const scopeAreaLabel = selectedAreaId === 'all'
+        ? 'Todas las áreas'
+        : selectedAreaId !== null
+            ? 'Área y subáreas'
+            : 'Mi área y subáreas';
+    const scopeLabel = (total: number) =>
+        `${rangeLabel} · Total: ${total} · ${scopeStateLabel} · ${scopeAreaLabel}`;
 
     return (
         <AppLayout>
@@ -232,7 +239,7 @@ export default function Dashboard() {
                                     key={t.code}
                                     icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
                                     title={`${t.name} por destino`}
-                                    description={`${rangeLabel} · Total: ${typeTotal(destinoStats, t.code)} · ${scopeLabel}`}
+                                    description={scopeLabel(typeTotal(destinoStats, t.code))}
                                     fileName={`por-destino-${slugifyCode(t.code)}`}
                                 >
                                     <MemoDestinoBarChart data={destinoStats} dataKey={t.code} label={t.name} />
@@ -241,7 +248,7 @@ export default function Dashboard() {
                             <ChartCard
                                 icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
                                 title="Total por destino"
-                                description={`${rangeLabel} · Total: ${grandTotal(destinoStats)} · ${scopeLabel}`}
+                                description={scopeLabel(grandTotal(destinoStats))}
                                 fileName="total-por-destino"
                             >
                                 <MemoDestinoBarChart data={destinoStats} dataKey="total" label="Total" />
@@ -254,7 +261,7 @@ export default function Dashboard() {
                                 <ChartCard
                                     key={t.code}
                                     title={`Detalle: ${t.name.toLowerCase()} por destino`}
-                                    description={`${rangeLabel} · Total: ${typeTotal(destinoStats, t.code)} · ${scopeLabel}`}
+                                    description={scopeLabel(typeTotal(destinoStats, t.code))}
                                     fileName={`detalle-por-destino-${slugifyCode(t.code)}`}
                                 >
                                     <ChartDataTable data={destinoStats} valueKey={t.code} labelHeader="Destino" />
@@ -262,7 +269,7 @@ export default function Dashboard() {
                             ))}
                             <ChartCard
                                 title="Detalle: total por destino"
-                                description={`${rangeLabel} · Total: ${grandTotal(destinoStats)} · ${scopeLabel}`}
+                                description={scopeLabel(grandTotal(destinoStats))}
                                 fileName="detalle-total-por-destino"
                             >
                                 <ChartDataTable data={destinoStats} valueKey="total" labelHeader="Destino" />
@@ -283,7 +290,7 @@ export default function Dashboard() {
                                     key={t.code}
                                     icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
                                     title={`${t.name} por usuario`}
-                                    description={`${rangeLabel} · Total: ${typeTotal(userStats, t.code)} · ${scopeLabel}`}
+                                    description={scopeLabel(typeTotal(userStats, t.code))}
                                     fileName={`por-usuario-${slugifyCode(t.code)}`}
                                 >
                                     <MemoDestinoBarChart data={userStats} dataKey={t.code} label={t.name} />
@@ -292,7 +299,7 @@ export default function Dashboard() {
                             <ChartCard
                                 icon={<BarChart2 className="h-4 w-4 text-muted-foreground" />}
                                 title="Total por usuario"
-                                description={`${rangeLabel} · Total: ${grandTotal(userStats)} · ${scopeLabel}`}
+                                description={scopeLabel(grandTotal(userStats))}
                                 fileName="total-por-usuario"
                             >
                                 <MemoDestinoBarChart data={userStats} dataKey="total" label="Total" />
@@ -305,7 +312,7 @@ export default function Dashboard() {
                                 <ChartCard
                                     key={t.code}
                                     title={`Detalle: ${t.name.toLowerCase()} por usuario`}
-                                    description={`${rangeLabel} · Total: ${typeTotal(userStats, t.code)} · ${scopeLabel}`}
+                                    description={scopeLabel(typeTotal(userStats, t.code))}
                                     fileName={`detalle-por-usuario-${slugifyCode(t.code)}`}
                                 >
                                     <ChartDataTable data={userStats} valueKey={t.code} labelHeader="Usuario" />
@@ -313,7 +320,7 @@ export default function Dashboard() {
                             ))}
                             <ChartCard
                                 title="Detalle: total por usuario"
-                                description={`${rangeLabel} · Total: ${grandTotal(userStats)} · ${scopeLabel}`}
+                                description={scopeLabel(grandTotal(userStats))}
                                 fileName="detalle-total-por-usuario"
                             >
                                 <ChartDataTable data={userStats} valueKey="total" labelHeader="Usuario" />

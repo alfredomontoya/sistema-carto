@@ -35,9 +35,10 @@ interface CommunicationRepository
     public function countForAreaYearType(string $areaId, string $communicationTypeId, int $year): int;
 
     /**
+     * @param  array<int, string>|null  $areaIds  when empty, no area matches
      * @return array<int, array<string, int>>
      */
-    public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array;
+    public function getMonthlyStats(int $year, ?array $areaIds = null, ?string $userId = null): array;
 
     /**
      * @param  array<int, string>|null  $scopeAreaIds  when given, every listed area
@@ -47,19 +48,22 @@ interface CommunicationRepository
     public function getDestinoStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false, ?array $scopeAreaIds = null): array;
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return array<int, array<string, int|string>>
      */
-    public function getUserStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array;
+    public function getUserStats(string $from, string $to, ?array $areaIds = null, ?string $userId = null, bool $includeAnnulled = false): array;
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return array<int, int>
      */
-    public function getAvailableYears(?string $areaId = null, ?string $userId = null): array;
+    public function getAvailableYears(?array $areaIds = null, ?string $userId = null): array;
 
     /**
      * Detailed rows for the PDF report, ordered chronologically.
      *
+     * @param  array<int, string>|null  $areaIds
      * @return Collection<int, Communication>
      */
-    public function reportData(string $from, string $to, ?string $areaId = null, bool $includeAnnulled = false): Collection;
+    public function reportData(string $from, string $to, ?array $areaIds = null, bool $includeAnnulled = false): Collection;
 }

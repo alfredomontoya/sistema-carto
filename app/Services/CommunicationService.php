@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Area;
 use App\Models\Communication;
 use App\Models\User;
 use App\Repositories\Contracts\AreaRepository;
@@ -205,25 +206,26 @@ class CommunicationService
 
     public function getDashboardStats(User $user, int $year, ?string $areaFilter = null): array
     {
-        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
-        $scope = $this->statsScopeKeyFor($areaId, $global);
+        [$areaIds, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaIds, $global);
         $cacheKey = "dashboard:stats:v{$this->statsVersion()}:{$scope}:{$year}";
 
-        return Cache::remember($cacheKey, 300, function () use ($areaId, $global, $year) {
-            if (! $global && $areaId === null) {
+        return Cache::remember($cacheKey, 300, function () use ($areaIds, $global, $year) {
+            if (! $global && $areaIds === null) {
                 return [];
             }
 
-            return $this->communications->getMonthlyStats($year, $global ? null : $areaId, null);
+            return $this->communications->getMonthlyStats($year, $global ? null : $areaIds, null);
         });
     }
 
     public function getDestinoStats(User $user, string $from, string $to, bool $includeAnnulled = false, ?string $areaFilter = null): array
     {
-        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        [$areaIds, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $areaId = $areaIds[0] ?? null;
         $scopeAreaIds = $this->resolveDestinoScope($user);
         $scope = $scopeAreaIds === null
-            ? $this->statsScopeKeyFor($areaId, $global)
+            ? $this->statsScopeKeyFor($areaIds, $global)
             : 'areas_'.md5(implode(',', [...$scopeAreaIds]));
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:destino:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
@@ -256,7 +258,7 @@ class CommunicationService
         }
 
         if ($user->hasRole('jefe')) {
-            return array_merge([$area->id], $this->areaRepository->descendantIds($area));
+            return $this->areaRepository->descendantIdsIncluding($area);
         }
 
         return null;
@@ -264,50 +266,51 @@ class CommunicationService
 
     public function getUserStats(User $user, string $from, string $to, bool $includeAnnulled = false, ?string $areaFilter = null): array
     {
-        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
-        $scope = $this->statsScopeKeyFor($areaId, $global);
+        [$areaIds, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaIds, $global);
         $state = $includeAnnulled ? 'all' : 'active';
         $cacheKey = "dashboard:usuarios:v{$this->statsVersion()}:{$scope}:{$from}_{$to}:{$state}";
 
-        return Cache::remember($cacheKey, 300, function () use ($from, $to, $global, $areaId, $includeAnnulled) {
-            if (! $global && $areaId === null) {
+        return Cache::remember($cacheKey, 300, function () use ($from, $to, $global, $areaIds, $includeAnnulled) {
+            if (! $global && $areaIds === null) {
                 return [];
             }
 
-            return $this->communications->getUserStats($from, $to, $global ? null : $areaId, null, $includeAnnulled);
+            return $this->communications->getUserStats($from, $to, $global ? null : $areaIds, null, $includeAnnulled);
         });
     }
 
     public function getAvailableYears(User $user, ?string $areaFilter = null): array
     {
-        [$areaId, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
-        $scope = $this->statsScopeKeyFor($areaId, $global);
+        [$areaIds, $global] = $this->resolveStatsScopeWithFilter($user, $areaFilter);
+        $scope = $this->statsScopeKeyFor($areaIds, $global);
         $cacheKey = "dashboard:years:v{$this->statsVersion()}:{$scope}";
 
-        return Cache::remember($cacheKey, 3600, function () use ($global, $areaId) {
-            if (! $global && $areaId === null) {
+        return Cache::remember($cacheKey, 3600, function () use ($global, $areaIds) {
+            if (! $global && $areaIds === null) {
                 return [];
             }
 
-            return $this->communications->getAvailableYears($global ? null : $areaId, null);
+            return $this->communications->getAvailableYears($global ? null : $areaIds, null);
         });
     }
 
     /**
      * Detailed rows for the PDF report, scoped to the user's area
-     * (global only for area-less admins, empty for area-less others).
+     * subtree (global only for area-less admins, empty for area-less
+     * others).
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, Communication>
      */
     public function getReportData(User $user, string $from, string $to, bool $includeAnnulled = false): \Illuminate\Database\Eloquent\Collection
     {
-        [$areaId, $global] = $this->resolveStatsScope($user);
+        [$areaIds, $global] = $this->resolveStatsScope($user);
 
-        if (! $global && $areaId === null) {
+        if (! $global && $areaIds === null) {
             return new \Illuminate\Database\Eloquent\Collection();
         }
 
-        return $this->communications->reportData($from, $to, $global ? null : $areaId, $includeAnnulled);
+        return $this->communications->reportData($from, $to, $global ? null : $areaIds, $includeAnnulled);
     }
 
     /**
@@ -326,28 +329,29 @@ class CommunicationService
     }
 
     /**
-     * Dashboard scope: the user's own area when they have one
-     * (admins included), global only for area-less admins,
-     * empty for area-less basic users.
+     * Dashboard scope: the user's own area subtree when they have one
+     * (admins included), global only for area-less admins, empty for
+     * area-less basic users.
      *
      * An administrator may override the scope with an area filter:
-     * another area id, or 'all' for every area.
+     * another area id (its subtree), or 'all' for every area.
      *
-     * @return array{string|null, bool} [areaId, global]
+     * @return array{array<int, string>|null, bool} [areaIds, global]
      */
     private function resolveStatsScope(User $user): array
     {
-        $areaId = $user->currentArea?->id;
+        $user->loadMissing('currentAssignment.position.area');
+        $areaIds = $this->subtreeIds($user->currentArea);
 
-        if ($areaId !== null) {
-            return [$areaId, false];
+        if ($areaIds !== null) {
+            return [$areaIds, false];
         }
 
         return [null, $user->seesGlobalStats()];
     }
 
     /**
-     * @return array{string|null, bool} [areaId, global]
+     * @return array{array<int, string>|null, bool} [areaIds, global]
      */
     private function resolveStatsScopeWithFilter(User $user, ?string $areaFilter): array
     {
@@ -356,26 +360,45 @@ class CommunicationService
                 return [null, true];
             }
 
-            return [$areaFilter, false];
+            $area = $this->areaRepository->find($areaFilter);
+
+            if ($area !== null) {
+                return [$this->areaRepository->descendantIdsIncluding($area), false];
+            }
         }
 
         return $this->resolveStatsScope($user);
     }
 
-    private function statsScopeKey(User $user): string
+    /**
+     * @return array<int, string>|null
+     */
+    private function subtreeIds(?Area $area): ?array
     {
-        [$areaId, $global] = $this->resolveStatsScope($user);
-
-        return $this->statsScopeKeyFor($areaId, $global);
+        return $area !== null
+            ? $this->areaRepository->descendantIdsIncluding($area)
+            : null;
     }
 
-    private function statsScopeKeyFor(?string $areaId, bool $global): string
+    private function statsScopeKey(User $user): string
+    {
+        [$areaIds, $global] = $this->resolveStatsScope($user);
+
+        return $this->statsScopeKeyFor($areaIds, $global);
+    }
+
+    /**
+     * @param  array<int, string>|null  $areaIds
+     */
+    private function statsScopeKeyFor(?array $areaIds, bool $global): string
     {
         if ($global) {
             return 'global';
         }
 
-        return $areaId !== null ? "area_{$areaId}" : 'none';
+        return $areaIds !== null && $areaIds !== []
+            ? 'areas_'.md5(implode(',', $areaIds))
+            : 'none';
     }
 
     private function buildStatsCacheKey(User $user, int $year): string

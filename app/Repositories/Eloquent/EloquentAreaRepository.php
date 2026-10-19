@@ -124,6 +124,11 @@ class EloquentAreaRepository implements AreaRepository
         return $this->collectDescendants($area)->pluck('id')->all();
     }
 
+    public function descendantIdsIncluding(Area $area): array
+    {
+        return [$area->id, ...$this->descendantIds($area)];
+    }
+
     public function hasChildren(Area $area): bool
     {
         return $area->children()->exists();

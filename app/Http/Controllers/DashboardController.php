@@ -126,7 +126,9 @@ class DashboardController extends Controller
             'from' => $from->format('d/m/Y'),
             'to' => $to->format('d/m/Y'),
             'includeAnnulled' => $includeAnnulled,
-            'areaName' => $user->currentArea?->name,
+            'areaName' => $user->currentArea !== null
+                ? $user->currentArea->name.' (con subáreas)'
+                : null,
             'rows' => $rows,
             'total' => $rows->count(),
         ])->setPaper('letter', 'landscape')->setOption('isPhpEnabled', true);

@@ -96,8 +96,9 @@ class EloquentCommunicationRepository implements CommunicationRepository
 
     /**
      * @param  Builder<Communication>  $query
+     * @param  string|array<int, string>|null  $areaIds
      */
-    private function applyStatsScope(Builder $query, string $table, mixed $from, mixed $to, ?string $areaId, ?string $userId, bool $onlyActive): void
+    private function applyStatsScope(Builder $query, string $table, mixed $from, mixed $to, string|array|null $areaIds, ?string $userId, bool $onlyActive): void
     {
         $prefix = $table === '' ? '' : "{$table}.";
 
@@ -108,8 +109,10 @@ class EloquentCommunicationRepository implements CommunicationRepository
             $query->where("{$prefix}status", Communication::STATUS_ACTIVE);
         }
 
-        if ($areaId) {
-            $query->where("{$prefix}area_id", $areaId);
+        if (is_string($areaIds)) {
+            $query->where("{$prefix}area_id", $areaIds);
+        } elseif (is_array($areaIds)) {
+            $query->whereIn("{$prefix}area_id", $areaIds);
         }
 
         if ($userId) {
@@ -118,9 +121,10 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return Collection<int, Communication>
      */
-    public function reportData(string $from, string $to, ?string $areaId = null, bool $includeAnnulled = false): Collection
+    public function reportData(string $from, string $to, ?array $areaIds = null, bool $includeAnnulled = false): Collection
     {
         [$start, $end] = $this->dayRange($from, $to);
 
@@ -132,8 +136,8 @@ class EloquentCommunicationRepository implements CommunicationRepository
             $query->where('status', Communication::STATUS_ACTIVE);
         }
 
-        if ($areaId) {
-            $query->where('area_id', $areaId);
+        if ($areaIds !== null) {
+            $query->whereIn('area_id', $areaIds);
         }
 
         return $query->orderBy('created_at')
@@ -163,9 +167,10 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return array<int, array<string, int>>
      */
-    public function getMonthlyStats(int $year, ?string $areaId = null, ?string $userId = null): array
+    public function getMonthlyStats(int $year, ?array $areaIds = null, ?string $userId = null): array
     {
         $start = Carbon::create($year, 1, 1)->startOfDay();
         $end = Carbon::create($year, 12, 31)->endOfDay();
@@ -180,7 +185,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
             ->join('type_communications', 'type_communications.id', '=', 'communications.communication_type_id')
             ->selectRaw("{$monthExpr} as `month`, ".$columns, $bindings);
 
-        $this->applyStatsScope($query, 'communications', $start, $end, $areaId, $userId, true);
+        $this->applyStatsScope($query, 'communications', $start, $end, $areaIds, $userId, true);
 
         return $query->groupBy('month')
             ->orderBy('month')
@@ -203,9 +208,10 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return array<int, int>
      */
-    public function getAvailableYears(?string $areaId = null, ?string $userId = null): array
+    public function getAvailableYears(?array $areaIds = null, ?string $userId = null): array
     {
         $query = Communication::query()
             ->select('year')
@@ -213,7 +219,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
             ->where('status', Communication::STATUS_ACTIVE)
             ->orderByDesc('year');
 
-        if ($areaId) $query->where('area_id', $areaId);
+        if ($areaIds !== null) $query->whereIn('area_id', $areaIds);
         if ($userId) $query->where('user_id', $userId);
 
         return $query->pluck('year')->all();
@@ -277,9 +283,10 @@ class EloquentCommunicationRepository implements CommunicationRepository
     }
 
     /**
+     * @param  array<int, string>|null  $areaIds
      * @return array<int, array<string, int|string>>
      */
-    public function getUserStats(string $from, string $to, ?string $areaId = null, ?string $userId = null, bool $includeAnnulled = false): array
+    public function getUserStats(string $from, string $to, ?array $areaIds = null, ?string $userId = null, bool $includeAnnulled = false): array
     {
         [$columns, $bindings, $codes] = $this->typeCountColumns('type_communications');
 
@@ -288,7 +295,7 @@ class EloquentCommunicationRepository implements CommunicationRepository
             ->join('type_communications', 'type_communications.id', '=', 'communications.communication_type_id')
             ->selectRaw("`users`.`email` as `user_email`, {$columns}", $bindings);
 
-        $this->applyStatsScope($query, 'communications', $from, $to, $areaId, $userId, ! $includeAnnulled);
+        $this->applyStatsScope($query, 'communications', $from, $to, $areaIds, $userId, ! $includeAnnulled);
 
         return $this->mapGroupedStats(
             $query->groupBy('users.id', 'users.email')->orderByDesc('total')->limit(15)->get(),

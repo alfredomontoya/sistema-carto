@@ -83,9 +83,13 @@ Sistema para gestionar comunicaciones internas (`ci`) y oficios externos (`of`) 
   a cero para no producir nunca `NaN`.
 - Tarjetas, gráficos y tablas se generan uno por tipo con movimiento; los tipos
   en cero se ocultan. Sin movimiento, se muestra "Sin registros".
-- Alcance: cada usuario ve por defecto su propia área. Solo el rol
-  `administrador` tiene el filtro principal de área ("Mi área" / otra área /
-  "Todas las áreas"); el resto siempre ve su área aunque manipule el parámetro.
+- Alcance: cada usuario ve por defecto **su área y todo su subárbol**
+  (recursivo), administradores incluidos. Solo el rol `administrador` tiene
+  el filtro principal de área ("Mi área y subáreas" / otra área / "Todas las
+  áreas"); el resto siempre ve su subárbol aunque manipule el parámetro. Al
+  elegir otra área, también se agregan sus subáreas.
+- El reporte PDF (`GetReportData`) usa el mismo alcance jerárquico que el
+  dashboard.
 - Rendimiento: stats cacheadas 300s con clave por alcance resuelto, props
   diferidas (`destinoStats`/`userStats`) e índices (`comms_dashboard_area_idx`,
   etc.). Crear/editar/eliminar tipos invalida la caché de stats.

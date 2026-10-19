@@ -43,5 +43,12 @@ interface AreaRepository
      */
     public function descendantIds(Area $area): array;
 
+    /**
+     * The area id followed by every descendant id (recursive).
+     *
+     * @return array<int, string>
+     */
+    public function descendantIdsIncluding(Area $area): array;
+
     public function hasChildren(Area $area): bool;
 }

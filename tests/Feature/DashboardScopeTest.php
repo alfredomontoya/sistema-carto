@@ -143,4 +143,93 @@ class DashboardScopeTest extends TestCase
         $monthly = $service->getDashboardStats($admin->fresh(), now()->year);
         $this->assertSame(3, array_sum(array_column($monthly, 'total')));
     }
+
+    public function test_monthly_stats_include_area_subtrees(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $carto = Area::create([
+            'code' => 'carto',
+            'name' => 'DEPARTAMENTO DE CARTOGRAFIA',
+            'parent_id' => null,
+            'is_active' => true,
+        ]);
+
+        $sit = Area::create([
+            'code' => 'sit',
+            'name' => 'SISTEMAS DE INFORMACION TERRITORIAL',
+            'parent_id' => $carto->id,
+            'is_active' => true,
+        ]);
+
+        $unrelated = Area::create([
+            'code' => 'taes',
+            'name' => 'DEPARTAMENTO DE TAES',
+            'parent_id' => null,
+            'is_active' => true,
+        ]);
+
+        $cartoPosition = Position::create([
+            'area_id' => $carto->id,
+            'code' => 'TECNICO',
+            'name' => 'TECNICO',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $sitPosition = Position::create([
+            'area_id' => $sit->id,
+            'code' => 'TECNICO',
+            'name' => 'TECNICO',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $unrelatedPosition = Position::create([
+            'area_id' => $unrelated->id,
+            'code' => 'TECNICO',
+            'name' => 'TECNICO',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $parentUser = $this->makeUser('Padre', 'padre', 'administrador', $cartoPosition);
+        $childUser = $this->makeUser('Hijo', 'hijo', 'usuario', $sitPosition);
+        $outsiderUser = $this->makeUser('Ajeno', 'ajeno', 'usuario', $unrelatedPosition);
+
+        $service = app(CommunicationService::class);
+        $payload = [
+            'communication_type_id' => $this->communicationType()->id,
+            'reference' => 'Ref',
+            'recipient_name' => 'Dest',
+            'recipient_position' => 'TECNICO',
+            'area_destino_nombre' => 'CARTO',
+        ];
+
+        $service->create($parentUser, $payload);
+        $service->create($childUser, $payload);
+        $service->create($childUser, $payload);
+        $service->create($outsiderUser, $payload);
+
+        $from = now()->startOfYear()->toDateString();
+        $to = now()->endOfYear()->toDateString();
+
+        $parentStats = $service->getDashboardStats($parentUser->fresh(), now()->year);
+        $this->assertSame(3, array_sum(array_column($parentStats, 'total')));
+
+        $childStats = $service->getDashboardStats($childUser->fresh(), now()->year);
+        $this->assertSame(2, array_sum(array_column($childStats, 'total')));
+
+        $filtered = $service->getDashboardStats($parentUser->fresh(), now()->year, $sit->id);
+        $this->assertSame(2, array_sum(array_column($filtered, 'total')));
+
+        $all = $service->getDashboardStats($parentUser->fresh(), now()->year, 'all');
+        $this->assertSame(4, array_sum(array_column($all, 'total')));
+
+        $parentUsers = $service->getUserStats($parentUser->fresh(), $from, $to);
+        $this->assertSame(3, array_sum(array_column($parentUsers, 'total')));
+
+        $report = $service->getReportData($parentUser->fresh(), $from, $to);
+        $this->assertCount(3, $report);
+    }
 }
