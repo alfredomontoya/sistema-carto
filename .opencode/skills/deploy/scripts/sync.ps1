@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Despliegue de Carto al directorio WAMP con reporte por paso.
 .DESCRIPTION
@@ -67,23 +67,23 @@ function Dotenv-Value([string]$file, [string]$key) {
     return ($line -replace ("^\s*" + $key + "\s*=\s*"), "").Trim().Trim('"').Trim("'")
 }
 
-function Git([string[]]$gitArgs) {
-    $out = & git @gitArgs 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw "git $($gitArgs -join ' ') fallo: $($out.Trim())" }
+function Invoke-GitCmd([string[]]$gitArgs) {
+    $out = & git.exe @gitArgs 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Invoke-GitCmd $($gitArgs -join ' ') fallo: $($out.Trim())" }
     return $out.Trim()
 }
 
 try {
     Step "preflight-git" {
-        $st = Git @("-C", $Source, "status", "--short")
+        $st = Invoke-GitCmd @("-C", $Source, "status", "--short")
         if ($st) { throw "Hay cambios sin commitear en origen" }
         "limpio"
     }
 
     Step "preflight-pushed" {
-        $head = (Git @("-C", $Source, "rev-parse", "HEAD")).Trim()
+        $head = (Invoke-GitCmd @("-C", $Source, "rev-parse", "HEAD")).Trim()
         try {
-            $remote = (Git @("-C", $Source, "ls-remote", "origin", "refs/heads/main")).Trim()
+            $remote = (Invoke-GitCmd @("-C", $Source, "ls-remote", "origin", "refs/heads/main")).Trim()
             if (-not $remote) { throw "origin/main no responde" }
             $remoteSha = ($remote -split "`t")[0]
             if ($remoteSha -ne $head) {
@@ -121,7 +121,7 @@ try {
 
     Step "preflight-destino" {
         if (-not (Test-Path -LiteralPath (Join-Path $Target ".git"))) { throw "El destino no es un clon git" }
-        $st = Git @("-C", $Target, "status", "--short")
+        $st = Invoke-GitCmd @("-C", $Target, "status", "--short")
         if ($st) { throw "El destino tiene cambios locales: $($st -replace "`r?`n", "; ")" }
         "destino limpio"
     }
@@ -165,9 +165,9 @@ try {
 
     if (-not $SkipGitSync) {
         Step "git-sync" {
-            Git @("-C", $Target, "fetch", "--no-tags", $Source, "main") | Out-Null
-            Git @("-C", $Target, "merge", "--ff-only", "FETCH_HEAD") | Out-Null
-            (Git @("-C", $Target, "rev-parse", "HEAD")).Trim()
+            Invoke-GitCmd @("-C", $Target, "fetch", "--no-tags", $Source, "main") | Out-Null
+            Invoke-GitCmd @("-C", $Target, "merge", "--ff-only", "FETCH_HEAD") | Out-Null
+            (Invoke-GitCmd @("-C", $Target, "rev-parse", "HEAD")).Trim()
         }
     } else {
         Write-Output "STEP|git-sync|SKIP|0ms|--skip-git-sync"
@@ -309,8 +309,8 @@ try {
     }
 
     Step "verify-commit" {
-        $sourceHead = (Git @("-C", $Source, "rev-parse", "HEAD")).Trim()
-        $targetHead = (Git @("-C", $Target, "rev-parse", "HEAD")).Trim()
+        $sourceHead = (Invoke-GitCmd @("-C", $Source, "rev-parse", "HEAD")).Trim()
+        $targetHead = (Invoke-GitCmd @("-C", $Target, "rev-parse", "HEAD")).Trim()
         if ($sourceHead -ne $targetHead) { throw "commit destino ($targetHead) != origen ($sourceHead)" }
         $targetHead.Substring(0, 7)
     }
@@ -340,3 +340,4 @@ try {
     Write-Output ("SUMMARY|aborted|{0}|{1}" -f $script:failed, $script:totalMs)
     exit 1
 }
+
