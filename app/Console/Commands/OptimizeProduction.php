@@ -7,7 +7,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Route;
 
 class OptimizeProduction extends Command
 {
@@ -100,7 +99,7 @@ class OptimizeProduction extends Command
             $this->check(
                 'Cachés de Laravel vigentes',
                 $configCached
-                    && Route::hasCachedRoutes()
+                    && is_file(app()->getCachedRoutesPath())
                     && is_file(base_path('bootstrap/cache/events.php')),
                 $configCached ? $this->cachedViews() : 'Falta bootstrap/cache/config.php (corre app:optimize-produccion)'
             ),
