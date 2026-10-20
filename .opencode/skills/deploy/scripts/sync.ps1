@@ -87,8 +87,11 @@ function Invoke-GitCmd([string[]]$gitArgs) {
 
 try {
     Step "preflight-git" {
-        $st = Invoke-GitCmd @("-C", $Source, "status", "--short")
-        if ($st) { throw "Hay cambios sin commitear en origen" }
+        $changed = Invoke-GitCmd @("-C", $Source, "diff", "--name-only")
+        $staged = Invoke-GitCmd @("-C", $Source, "diff", "--cached", "--name-only")
+        $untracked = Invoke-GitCmd @("-C", $Source, "ls-files", "--others", "--exclude-standard")
+        $dirty = @($changed, $staged, $untracked) | Where-Object { $_ }
+        if ($dirty.Count -gt 0) { throw "Hay cambios sin commitear en origen: $($dirty -join "; ")" }
         "limpio"
     }
 
@@ -133,8 +136,11 @@ try {
 
     Step "preflight-destino" {
         if (-not (Test-Path -LiteralPath (Join-Path $Target ".git"))) { throw "El destino no es un clon git" }
-        $st = Invoke-GitCmd @("-C", $Target, "status", "--short")
-        if ($st) { throw "El destino tiene cambios locales: $($st -replace "`r?`n", "; ")" }
+        $changed = Invoke-GitCmd @("-C", $Target, "diff", "--name-only")
+        $staged = Invoke-GitCmd @("-C", $Target, "diff", "--cached", "--name-only")
+        $untracked = Invoke-GitCmd @("-C", $Target, "ls-files", "--others", "--exclude-standard")
+        $dirty = @($changed, $staged, $untracked) | Where-Object { $_ }
+        if ($dirty.Count -gt 0) { throw "El destino tiene cambios locales: $($dirty -join "; ")" }
         "destino limpio"
     }
 
