@@ -149,7 +149,7 @@ class OptimizeProduction extends Command
 
             $this->components->twoColumnDetail($check['label'], $badge.$check['detail']);
 
-            if (! $check['ok']) {
+            if (! $check['ok'] && $check['level'] !== 'warn') {
                 $failed++;
             } elseif ($check['level'] === 'warn') {
                 $warnings++;
@@ -311,16 +311,30 @@ class OptimizeProduction extends Command
 
     private function appKeyPresent(): bool
     {
-        $key = (string) config('app.key');
+        $key = trim((string) config('app.key'));
 
-        return $key !== '' && ! str_contains($key, 'base64:');
+        if ($key === '') {
+            return false;
+        }
+
+        if (str_starts_with($key, 'base64:')) {
+            $decoded = base64_decode(substr($key, 7), true);
+
+            return is_string($decoded) && $decoded !== '';
+        }
+
+        return strlen($key) >= 32;
     }
 
     private function appKeyState(): string
     {
-        $key = (string) config('app.key');
+        $key = trim((string) config('app.key'));
 
-        return $key === '' ? 'APP_KEY vacía' : 'APP_KEY presente';
+        if ($key === '') {
+            return 'APP_KEY vacía';
+        }
+
+        return str_starts_with($key, 'base64:') ? 'APP_KEY en base64, válida' : 'APP_KEY en texto, válida';
     }
 
     private function iniBytes(string $key): int
