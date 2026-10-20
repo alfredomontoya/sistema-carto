@@ -68,8 +68,15 @@ function Dotenv-Value([string]$file, [string]$key) {
 }
 
 function Invoke-GitCmd([string[]]$gitArgs) {
-    $out = & git.exe @gitArgs 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw "Invoke-GitCmd $($gitArgs -join ' ') fallo: $($out.Trim())" }
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $out = & git.exe @gitArgs 2>&1 | Out-String
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0) { throw "git $($gitArgs -join ' ') fallo: $($out.Trim())" }
     return $out.Trim()
 }
 
