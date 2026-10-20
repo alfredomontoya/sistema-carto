@@ -80,9 +80,16 @@ function Dotenv-Value([string]$file, [string]$key) {
 }
 
 function Invoke-GitCmd([string[]]$gitArgs) {
-    $result = Invoke-Native { & git.exe @gitArgs 2>&1 }
-    if ($result.Code -ne 0) { throw "git $($gitArgs -join ' ') fallo: $($result.Output)" }
-    return $result.Output.Trim()
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $stdout = & git.exe @gitArgs 2>$null | Out-String
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0) { throw "git $($gitArgs -join ' ') fallo (exit $code)" }
+    return $stdout.Trim()
 }
 
 try {
