@@ -203,8 +203,8 @@ try {
         $dirExcludes = @(".git", "node_modules", "tests", ".opencode", "storage\app\backups", "storage\app\public", "storage\framework", "storage\logs")
         if ($hasComposer) { $dirExcludes += @("vendor") }
         $fileExcludes = @(".env*", "*.log", "*.md", "phpunit.xml", "vite.config.js", "tsconfig.json", ".phpunit.result.cache", "public\hot")
-        $args = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $dirExcludes + @("/XF") + $fileExcludes
-        $copy = Invoke-Native { & robocopy @args }
+        $rcArgs = @($Source, $Target, "/MIR", "/NJH", "/NJS", "/NP", "/XD") + $dirExcludes + @("/XF") + $fileExcludes
+        $copy = Invoke-Native { & robocopy @rcArgs }
         if ($copy.Code -gt 7) { throw "robocopy exit=$($copy.Code)" }
         "mirror ok (storage de destino preservado)"
     }
