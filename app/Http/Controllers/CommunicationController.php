@@ -168,6 +168,8 @@ class CommunicationController extends Controller
             abort(404);
         }
 
+        $this->authorize('download', $communication);
+
         return Storage::disk('public')->download(
             $communication->file_path,
             $communication->file_name ?? basename($communication->file_path),

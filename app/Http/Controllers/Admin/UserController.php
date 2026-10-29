@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\ResetPasswordRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Services\AreaService;
 use App\Services\PasswordRecoveryService;
 use App\Services\UserService;
@@ -14,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -54,6 +56,10 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
+        $roleIds = $request->validated('role_ids') ?? [];
+
+        $this->assertCanAssignRoles($request, $roleIds);
+
         $user = $this->users->create(
             [
                 ...$request->safe()->except(['role_ids', 'position_id', 'password_confirmation', 'username', 'recovery_email']),
@@ -118,7 +124,16 @@ class UserController extends Controller
         }
 
         if ($request->has('role_ids')) {
-            $this->users->syncRoles($user, $request->validated('role_ids'));
+            $roleIds = $request->validated('role_ids') ?? [];
+
+            $this->assertCanAssignRoles($request, $roleIds);
+
+            if ($this->wouldRemoveLastAdmin($user, $roleIds)) {
+                return redirect()->route('admin.users.edit', $user->id)
+                    ->with('error', 'No puedes quitar el rol de administrador al último administrador activo.');
+            }
+
+            $this->users->syncRoles($user, $roleIds);
         }
 
         if ($request->filled('position_id')) {
@@ -159,6 +174,11 @@ class UserController extends Controller
             return redirect()->route('admin.users.index')->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
+        if ($user->hasRole('administrador') && $this->activeAdminCount() <= 1) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'No puedes eliminar al último administrador activo.');
+        }
+
         $deleted = $this->users->delete($user);
 
         if (! $deleted) {
@@ -167,5 +187,41 @@ class UserController extends Controller
         }
 
         return redirect()->route('admin.users.index')->with('success', 'Usuario eliminado.');
+    }
+
+    private function assertCanAssignRoles(Request $request, array $roleIds): void
+    {
+        if ($request->user()?->hasRole('administrador')) {
+            return;
+        }
+
+        $assignsAdmin = Role::query()
+            ->whereIn('id', $roleIds)
+            ->where('name', 'administrador')
+            ->exists();
+
+        abort_if($assignsAdmin, 403, 'Solo un administrador puede asignar el rol administrador.');
+    }
+
+    private function wouldRemoveLastAdmin(User $user, array $roleIds): bool
+    {
+        if (! $user->hasRole('administrador')) {
+            return false;
+        }
+
+        $keepsAdmin = Role::query()
+            ->whereIn('id', $roleIds)
+            ->where('name', 'administrador')
+            ->exists();
+
+        return ! $keepsAdmin && $this->activeAdminCount() <= 1;
+    }
+
+    private function activeAdminCount(): int
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->role('administrador')
+            ->count();
     }
 }
