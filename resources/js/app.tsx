@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
@@ -9,6 +9,25 @@ import { ThemeProvider } from '@/components/brand/ThemeProvider';
 import { NavigationLoader, dismissBootSplash } from '@/components/PageLoader';
 import { getAppName } from '@/lib/app-name';
 import type { BrandData } from '@/types';
+
+const CSRF_RECOVERY_KEY = 'csrf-recovery-at';
+
+router.on('invalid', (event) => {
+    if (event.detail.response.status !== 419) {
+        return;
+    }
+
+    const lastAttempt = Number(window.sessionStorage.getItem(CSRF_RECOVERY_KEY) ?? 0);
+
+    if (Date.now() - lastAttempt < 10000) {
+        return;
+    }
+
+    window.sessionStorage.setItem(CSRF_RECOVERY_KEY, String(Date.now()));
+    window.location.reload();
+
+    return false;
+});
 
 createInertiaApp({
     title: (title) =>
