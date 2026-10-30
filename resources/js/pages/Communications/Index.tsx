@@ -9,6 +9,7 @@ import { CommunicationCreateDialog } from '@/components/communications/Communica
 import { CommunicationEditDialog } from '@/components/communications/CommunicationEditDialog';
 import { CommunicationShowDialog } from '@/components/communications/CommunicationShowDialog';
 import { CopyNumberButton } from '@/components/communications/CopyNumberButton';
+import { HighlightText } from '@/components/HighlightText';
 import {
     ClearFiltersButton,
     FilterDropdown,
@@ -289,7 +290,7 @@ export default function CommunicationsIndex({
                                                                  title="Ver detalle"
                                                                  className="font-mono text-sm font-medium uppercase text-primary hover:underline"
                                                              >
-                                                                {c.number}
+                                                                <HighlightText text={c.number} query={filters.search} />
                                                             </button>
                                                             <CopyNumberButton value={c.number} />
                                                         </div>
@@ -305,9 +306,15 @@ export default function CommunicationsIndex({
                                                             {c.position?.name ?? '—'}
                                                             {c.user?.current_area ? ` · ${c.user.current_area.name}` : ''}
                                                         </p>
+                                                        <p>
+                                                            <span className="text-xs text-muted-foreground">Ref: </span>
+                                                            <span className="text-sm font-medium"> <HighlightText text={c.reference} query={filters.search} /></span>
+                                                        </p>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <p className="text-sm">{c.recipient_name}</p>
+                                                        <p className="text-sm">
+                                                            <HighlightText text={c.recipient_name} query={filters.search} />
+                                                        </p>
                                                         {c.recipient_position && (
                                                             <p className="text-xs text-muted-foreground">
                                                                 {c.recipient_position}
